@@ -11,9 +11,16 @@ interface RouletteLogic {
   calculateSelectedIndex: (options: string[], finalRotation: number) => number;
 }
 
+// 暗号学的に安全な乱数生成器
+const cryptoRandom = (): number => {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return array[0] / (0xffffffff + 1);
+};
+
 // デフォルトのルーレットロジック
 export const createDefaultRouletteLogic = (
-  random: () => number = Math.random
+  random: () => number = cryptoRandom
 ): RouletteLogic => ({
   calculateRotation: () => ({
     totalRotation: 3600 + random() * 360, // 10回転 + ランダムな角度
