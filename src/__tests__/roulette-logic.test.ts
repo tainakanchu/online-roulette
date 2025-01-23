@@ -26,6 +26,45 @@ describe("RouletteLogic", () => {
       // 全ての結果が異なることを確認
       expect(results.size).toBe(10);
     });
+
+    it("100000回の試行での選択分布を確認する", () => {
+      const options = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]; // 10個の選択肢
+      const counts: { [key: string]: number } = {};
+      options.forEach((option) => (counts[option] = 0));
+
+      const logic = createDefaultRouletteLogic();
+      const trials = 100000;
+
+      // 100000回試行
+      for (let i = 0; i < trials; i++) {
+        // 毎回新しい回転を計算（前回の回転は考慮しない）
+        const { totalRotation } = logic.calculateRotation();
+        // 最終的な角度のみを使用して選択肢を決定
+        const finalRotation = totalRotation % 360;
+        const selectedIndex = logic.calculateSelectedIndex(
+          options,
+          finalRotation
+        );
+        counts[options[selectedIndex]]++;
+      }
+
+      // 結果を出力
+      console.log("\n=== 100000回の試行結果 ===");
+      console.log("選択肢 | 回数 | 割合(%)");
+      console.log("------------------------");
+      Object.entries(counts).forEach(([option, count]) => {
+        const percentage = ((count / trials) * 100).toFixed(2);
+        console.log(`${option} | ${count} | ${percentage}%`);
+      });
+
+      // 各選択肢が全体の8%から12%の間に収まっていることを確認
+      // (完全な一様分布では10%になるはず)
+      Object.values(counts).forEach((count) => {
+        const percentage = (count / trials) * 100;
+        expect(percentage).toBeGreaterThanOrEqual(8);
+        expect(percentage).toBeLessThanOrEqual(12);
+      });
+    });
   });
 
   describe("calculateSelectedIndex", () => {
