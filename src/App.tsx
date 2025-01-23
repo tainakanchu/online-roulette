@@ -21,8 +21,8 @@ export const createDefaultRouletteLogic = (
   }),
   calculateSelectedIndex: (options: string[], finalRotation: number) => {
     const sliceAngle = 360 / options.length;
-    const normalizedRotation = finalRotation % 360;
-    // 時計回りの回転に合わせて計算を修正
+    // 時計回りの回転に対して、選択肢は反時計回りにインデックスが増える
+    const normalizedRotation = (360 - (finalRotation % 360)) % 360;
     const index = Math.floor(normalizedRotation / sliceAngle);
     return index;
   },
