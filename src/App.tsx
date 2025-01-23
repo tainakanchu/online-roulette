@@ -234,10 +234,10 @@ function App() {
 
   return (
     <div className="container">
-      <h1>ルーレット</h1>
+      <h1 className="main-title">🎯 Lucky Roulette</h1>
 
       <div className="input-section">
-        <h2>選択肢を入力</h2>
+        <h2 className="section-title">選択肢を入力してください</h2>
         <textarea
           value={optionsText}
           onChange={handleOptionsChange}
