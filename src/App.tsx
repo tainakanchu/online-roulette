@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { COLORS, getColorBrightness } from "./constants/colors";
 
 // ランダム選択に関するロジックを分離
 interface RouletteLogic {
@@ -34,55 +35,6 @@ export const createDefaultRouletteLogic = (
     return index;
   },
 });
-
-// 色の明るさを計算する関数
-const getColorBrightness = (hexColor: string): number => {
-  // #を除去し、RGBの値を取得
-  const rgb = hexColor.replace("#", "").match(/.{2}/g);
-  if (!rgb) return 0;
-
-  // 16進数を10進数に変換
-  const r = parseInt(rgb[0], 16);
-  const g = parseInt(rgb[1], 16);
-  const b = parseInt(rgb[2], 16);
-
-  // YIQ式で明るさを計算（人間の目の感度を考慮した重み付け）
-  return (r * 299 + g * 587 + b * 114) / 1000;
-};
-
-// 30色のカラーパレット
-const COLORS = [
-  "#FF6B6B", // 赤
-  "#4ECDC4", // ターコイズ
-  "#45B7D1", // 青
-  "#96CEB4", // 薄緑
-  "#FFEEAD", // クリーム
-  "#FFD93D", // 黄色
-  "#6C5CE7", // 紫
-  "#A8E6CF", // ミント
-  "#FF8B94", // サーモンピンク
-  "#A3A1FF", // ラベンダー
-  "#FFB6B9", // ピーチ
-  "#67E0A3", // エメラルド
-  "#FF9A76", // コーラル
-  "#88D8B0", // セージグリーン
-  "#FFC75F", // オレンジ
-  "#B5EAD7", // パステルグリーン
-  "#E2F0CB", // ライムグリーン
-  "#C7CEEA", // パウダーブルー
-  "#FF9AA2", // ローズ
-  "#B5B9FF", // パステルパープル
-  "#ADE8F4", // スカイブルー
-  "#FFB7B2", // ピンク
-  "#E0BBE4", // ライラック
-  "#957DAD", // モーブ
-  "#D4A5A5", // ダスティローズ
-  "#9ED2C6", // シーフォーム
-  "#FFE5D9", // ピーチクリーム
-  "#FED7C3", // アプリコット
-  "#F9DCC4", // ベージュ
-  "#FEC89A", // メロン
-];
 
 function App() {
   const [optionsText, setOptionsText] = useState(() => {
