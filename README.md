@@ -1,50 +1,53 @@
-# React + TypeScript + Vite
+# 🎲 Online Roulette
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+遊び心満載のオンラインルーレット！友達と一緒に使って、今日のランチを決めたり、誰が掃除当番になるかを決めたり...使い方は無限大です！
 
-Currently, two official plugins are available:
+## ✨ デモ
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+[オンラインルーレットを試す](https://online-roulette-mu.vercel.app/)
 
-## Expanding the ESLint configuration
+## 🌟 特徴
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- 🎯 シンプルで使いやすいインターフェース
+- 🎨 カラフルで楽しいアニメーション
+- ✏️ カスタマイズ可能な選択肢
+- 📱 スマートフォン対応
+- 🚀 高速な動作
 
-- Configure the top-level `parserOptions` property like this:
+## 🛠️ 開発者向け情報
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### 技術スタック
+
+- React + TypeScript
+- Vite
+- CSS Modules
+- Canvas API
+
+### ローカルでの実行方法
+
+```bash
+# パッケージのインストール
+pnpm install
+
+# 開発サーバーの起動
+pnpm dev
+
+# ビルド
+pnpm build
+
+# テストの実行
+pnpm test
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+## 🤝 コントリビューション
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+バグ報告や機能要望は大歓迎です！プルリクエストもお待ちしています。
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+## 📝 ライセンス
+
+[MIT](./LICENSE) © 2024 tainakanchu
+
+## 🌈 作者より
+
+「決められない...」そんな時の救世主になれれば幸いです。
+楽しく使っていただけると嬉しいです！
