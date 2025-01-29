@@ -69,9 +69,9 @@ export const RouletteCanvas: React.FC<RouletteCanvasProps> = ({
 
     // 矢印を描画
     ctx.beginPath();
-    ctx.moveTo(centerX + radius + 10, centerY);
-    ctx.lineTo(centerX + radius - 10, centerY - 10);
-    ctx.lineTo(centerX + radius - 10, centerY + 10);
+    ctx.moveTo(centerX + radius + 30, centerY - 15);
+    ctx.lineTo(centerX + radius - 10, centerY);
+    ctx.lineTo(centerX + radius + 30, centerY + 15);
     ctx.closePath();
     ctx.fillStyle = "#FF0000";
     ctx.fill();
