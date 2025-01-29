@@ -1,11 +1,13 @@
 interface RouletteInputProps {
   optionsText: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  disabled?: boolean;
 }
 
 export const RouletteInput: React.FC<RouletteInputProps> = ({
   optionsText,
   onChange,
+  disabled = false,
 }) => {
   return (
     <div className="input-section">
@@ -13,6 +15,7 @@ export const RouletteInput: React.FC<RouletteInputProps> = ({
       <textarea
         value={optionsText}
         onChange={onChange}
+        disabled={disabled}
         placeholder="選択肢を改行で区切って入力してください"
         rows={5}
         className="options-input"

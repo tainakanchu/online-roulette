@@ -16,7 +16,11 @@ function App() {
     <div className="container">
       <h1 className="main-title">🎯 Lucky Roulette</h1>
 
-      <RouletteInput optionsText={optionsText} onChange={handleOptionsChange} />
+      <RouletteInput
+        optionsText={optionsText}
+        onChange={handleOptionsChange}
+        disabled={isSpinning}
+      />
 
       <div className="roulette-section">
         <RouletteCanvas options={options} rotation={rotation} />
