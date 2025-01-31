@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { COLORS, getColorBrightness } from "../constants/colors";
 
 interface RouletteCanvasProps {
@@ -11,11 +11,25 @@ interface RouletteCanvasProps {
 export const RouletteCanvas: React.FC<RouletteCanvasProps> = ({
   options,
   rotation,
-  width = 400,
-  height = 400,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hasOptions = options.length > 0;
+  const [size, setSize] = useState({
+    width: window.innerWidth < 480 ? 300 : 400,
+    height: window.innerWidth < 480 ? 300 : 400,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setSize({
+        width: window.innerWidth < 480 ? 300 : 400,
+        height: window.innerWidth < 480 ? 300 : 400,
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const drawRoulette = useCallback(() => {
     const canvas = canvasRef.current;
@@ -60,7 +74,8 @@ export const RouletteCanvas: React.FC<RouletteCanvasProps> = ({
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
       ctx.fillStyle = getColorBrightness(color) > 128 ? "#000000" : "#FFFFFF";
-      ctx.font = "bold 16px sans-serif";
+      const fontSize = window.innerWidth < 480 ? 14 : 16;
+      ctx.font = `bold ${fontSize}px sans-serif`;
       ctx.fillText(option, radius - 20, 0);
       ctx.restore();
     });
@@ -68,10 +83,11 @@ export const RouletteCanvas: React.FC<RouletteCanvasProps> = ({
     ctx.restore();
 
     // 矢印を描画
+    const arrowSize = window.innerWidth < 480 ? 20 : 30;
     ctx.beginPath();
-    ctx.moveTo(centerX + radius + 30, centerY - 15);
+    ctx.moveTo(centerX + radius + arrowSize, centerY - arrowSize / 2);
     ctx.lineTo(centerX + radius - 10, centerY);
-    ctx.lineTo(centerX + radius + 30, centerY + 15);
+    ctx.lineTo(centerX + radius + arrowSize, centerY + arrowSize / 2);
     ctx.closePath();
     ctx.fillStyle = "#FF0000";
     ctx.fill();
@@ -79,14 +95,14 @@ export const RouletteCanvas: React.FC<RouletteCanvasProps> = ({
 
   useEffect(() => {
     drawRoulette();
-  }, [drawRoulette]);
+  }, [drawRoulette, size]);
 
   return (
     <div className="canvas-container">
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
+        width={size.width}
+        height={size.height}
         className="roulette-canvas"
       />
     </div>
