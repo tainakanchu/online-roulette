@@ -3,6 +3,7 @@ import { RouletteResult } from "./components/RouletteResult";
 import { RouletteInput } from "./components/RouletteInput";
 import { useRouletteOptions } from "./hooks/useRouletteOptions";
 import { useRouletteAnimation } from "./hooks/useRouletteAnimation";
+import { Footer } from "./components/Footer";
 import "./styles/Roulette.css";
 
 function App() {
@@ -33,6 +34,8 @@ function App() {
           回す
         </button>
       </div>
+
+      <Footer />
     </div>
   );
 }
