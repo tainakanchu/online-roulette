@@ -6,7 +6,15 @@ import { RouletteActions } from "./components/RouletteActions";
 import { useRouletteOptions } from "./hooks/useRouletteOptions";
 import { useRouletteAnimation } from "./hooks/useRouletteAnimation";
 import { Footer } from "./components/Footer";
-import "./styles/Roulette.css";
+
+// スタイルのインポート
+import "./styles/base.css";
+import "./styles/components/RouletteInput.css";
+import "./styles/components/RouletteCanvas.css";
+import "./styles/components/RouletteResult.css";
+import "./styles/components/RouletteActions.css";
+import "./styles/themes/dark.css";
+import "./styles/responsive.css";
 
 function App() {
   const canvasRef = useRef<RouletteCanvasRef>(null);

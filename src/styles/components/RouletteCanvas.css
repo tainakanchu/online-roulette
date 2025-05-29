@@ -1,0 +1,33 @@
+.roulette-section {
+  text-align: center;
+}
+
+.canvas-container {
+  margin: 20px 0;
+  position: relative;
+}
+
+.roulette-canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.spin-button {
+  padding: 10px 30px;
+  font-size: 18px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.spin-button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.spin-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+} 

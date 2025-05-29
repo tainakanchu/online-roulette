@@ -1,0 +1,70 @@
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #121212;
+  }
+
+  .container {
+    background-color: #1a1a1a;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  .main-title {
+    color: #ffffff;
+  }
+
+  .options-input {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #ffffff;
+  }
+
+  .result {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  .result.spinning {
+    background: linear-gradient(135deg, #2a2a2a 0%, #222222 100%);
+  }
+
+  .result-label {
+    color: #aaa;
+  }
+
+  .result-value {
+    color: #ffffff;
+  }
+
+  .loading-text {
+    color: #aaa;
+  }
+
+  .default-text {
+    color: #888;
+  }
+
+  .help-text {
+    color: #aaa;
+  }
+
+  .action-button {
+    background-color: rgba(42, 42, 42, 0.9);
+    color: #ffffff;
+  }
+
+  .action-button:hover:not(:disabled) {
+    background-color: rgba(42, 42, 42, 1);
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+      box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+    }
+    100% {
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+  }
+} 
