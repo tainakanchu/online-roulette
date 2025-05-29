@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { COLORS, getColorBrightness } from "../constants/colors";
 import { useWindowSize } from "../hooks/useWindowSize";
 
@@ -9,10 +15,14 @@ interface RouletteCanvasProps {
   height?: number;
 }
 
-export const RouletteCanvas: React.FC<RouletteCanvasProps> = ({
-  options,
-  rotation,
-}) => {
+export interface RouletteCanvasRef {
+  getCanvas: () => HTMLCanvasElement | null;
+}
+
+export const RouletteCanvas = forwardRef<
+  RouletteCanvasRef,
+  RouletteCanvasProps
+>(({ options, rotation }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hasOptions = options.length > 0;
   const { isMobile } = useWindowSize();
@@ -21,6 +31,10 @@ export const RouletteCanvas: React.FC<RouletteCanvasProps> = ({
     width: isMobile ? 300 : 400,
     height: isMobile ? 300 : 400,
   };
+
+  useImperativeHandle(ref, () => ({
+    getCanvas: () => canvasRef.current,
+  }));
 
   const drawRoulette = useCallback(() => {
     const canvas = canvasRef.current;
@@ -98,4 +112,4 @@ export const RouletteCanvas: React.FC<RouletteCanvasProps> = ({
       />
     </div>
   );
-};
+});

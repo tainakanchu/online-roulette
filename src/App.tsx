@@ -1,12 +1,15 @@
-import { RouletteCanvas } from "./components/RouletteCanvas";
+import { useRef } from "react";
+import { RouletteCanvas, RouletteCanvasRef } from "./components/RouletteCanvas";
 import { RouletteResult } from "./components/RouletteResult";
 import { RouletteInput } from "./components/RouletteInput";
+import { RouletteActions } from "./components/RouletteActions";
 import { useRouletteOptions } from "./hooks/useRouletteOptions";
 import { useRouletteAnimation } from "./hooks/useRouletteAnimation";
 import { Footer } from "./components/Footer";
 import "./styles/Roulette.css";
 
 function App() {
+  const canvasRef = useRef<RouletteCanvasRef>(null);
   const { optionsText, options, hasOptions, handleOptionsChange } =
     useRouletteOptions();
   const { currentOption, isSpinning, rotation, spin } = useRouletteAnimation({
@@ -24,7 +27,18 @@ function App() {
       />
 
       <div className="roulette-section">
-        <RouletteCanvas options={options} rotation={rotation} />
+        <div className="canvas-container">
+          <RouletteCanvas
+            ref={canvasRef}
+            options={options}
+            rotation={rotation}
+          />
+          <RouletteActions
+            canvasElement={canvasRef.current?.getCanvas() || null}
+            currentOption={currentOption}
+            isVisible={!!currentOption && !isSpinning}
+          />
+        </div>
         <RouletteResult isSpinning={isSpinning} currentOption={currentOption} />
         <button
           onClick={spin}
