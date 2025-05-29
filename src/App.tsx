@@ -5,6 +5,8 @@ import { RouletteInput } from "./components/RouletteInput";
 import { RouletteActions } from "./components/RouletteActions";
 import { useRouletteOptions } from "./hooks/useRouletteOptions";
 import { useRouletteAnimation } from "./hooks/useRouletteAnimation";
+import { useSnackbar } from "./hooks/useSnackbar";
+import { Snackbar } from "./components/Snackbar";
 import { Footer } from "./components/Footer";
 
 // スタイルのインポート
@@ -13,6 +15,7 @@ import "./styles/components/RouletteInput.css";
 import "./styles/components/RouletteCanvas.css";
 import "./styles/components/RouletteResult.css";
 import "./styles/components/RouletteActions.css";
+import "./styles/components/Snackbar.css";
 import "./styles/themes/dark.css";
 import "./styles/responsive.css";
 
@@ -23,6 +26,7 @@ function App() {
   const { currentOption, isSpinning, rotation, spin } = useRouletteAnimation({
     options,
   });
+  const { isVisible, message, showSnackbar, hideSnackbar } = useSnackbar();
 
   return (
     <div className="container">
@@ -45,6 +49,7 @@ function App() {
             canvasElement={canvasRef.current?.getCanvas() || null}
             currentOption={currentOption}
             isVisible={!!currentOption && !isSpinning}
+            onSuccess={showSnackbar}
           />
         </div>
         <RouletteResult isSpinning={isSpinning} currentOption={currentOption} />
@@ -58,6 +63,11 @@ function App() {
       </div>
 
       <Footer />
+      <Snackbar
+        message={message}
+        isVisible={isVisible}
+        onClose={hideSnackbar}
+      />
     </div>
   );
 }

@@ -9,12 +9,14 @@ interface RouletteActionsProps {
   canvasElement: HTMLCanvasElement | null;
   currentOption: string;
   isVisible: boolean;
+  onSuccess: (message: string) => void;
 }
 
 export const RouletteActions: React.FC<RouletteActionsProps> = ({
   canvasElement,
   currentOption,
   isVisible,
+  onSuccess,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -28,10 +30,10 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
         currentOption
       );
       await copyImageToClipboard(imageBlob);
-      alert("結果画像をクリップボードにコピーしました！");
+      onSuccess("結果画像をクリップボードにコピーしました！");
     } catch (error) {
       console.error("Error copying to clipboard:", error);
-      alert("クリップボードへのコピーに失敗しました。");
+      onSuccess("クリップボードへのコピーに失敗しました。");
     } finally {
       setIsGenerating(false);
     }
@@ -56,9 +58,10 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
         .toString()
         .padStart(2, "0")}${now.getMinutes().toString().padStart(2, "0")}.png`;
       downloadImage(imageBlob, filename);
+      onSuccess("結果画像をダウンロードしました！");
     } catch (error) {
       console.error("Error downloading image:", error);
-      alert("画像のダウンロードに失敗しました。");
+      onSuccess("画像のダウンロードに失敗しました。");
     } finally {
       setIsGenerating(false);
     }
