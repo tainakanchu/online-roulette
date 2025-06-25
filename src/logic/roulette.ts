@@ -16,9 +16,15 @@ export interface RouletteLogic {
   calculateSelectedIndex: (options: string[], finalRotation: number) => number;
 }
 
-// デフォルトのルーレットロジック
+// 初期回転角度のランダム化（セッション開始時の偏りを防ぐ）
+export const generateInitialRotation = (): number => {
+  return cryptoRandom() * 360;
+};
+
+// デフォルトのルーレットロジック（初期回転角度考慮版）
 export const createDefaultRouletteLogic = (
-  random: () => number = cryptoRandom
+  random: () => number = cryptoRandom,
+  initialRotation?: number
 ): RouletteLogic => ({
   calculateRotation: () => ({
     totalRotation: 3600 + random() * 360, // 10回転 + ランダムな角度
@@ -26,8 +32,10 @@ export const createDefaultRouletteLogic = (
   }),
   calculateSelectedIndex: (options: string[], finalRotation: number) => {
     const sliceAngle = 360 / options.length;
+    // 初期回転角度を考慮
+    const adjustedRotation = finalRotation + (initialRotation || 0);
     // 時計回りの回転に対して、選択肢は反時計回りにインデックスが増える
-    const normalizedRotation = (360 - (finalRotation % 360)) % 360;
+    const normalizedRotation = (360 - (adjustedRotation % 360)) % 360;
     const index = Math.floor(normalizedRotation / sliceAngle);
     return index;
   },

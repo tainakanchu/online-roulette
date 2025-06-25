@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from "react";
-import { createDefaultRouletteLogic } from "../logic/roulette";
+import { createDefaultRouletteLogic, generateInitialRotation } from "../logic/roulette";
 
 // 音を鳴らす最小間隔（ミリ秒）
 const MIN_TICK_INTERVAL_MS = 30;
@@ -19,8 +19,11 @@ export const useRouletteAnimation = ({
   const lastTickTimeRef = useRef<number>(0);
   const tickSound = useMemo(() => new Audio("/sounds/tick.mp3"), []);
 
+  // 初期回転角度をランダム化（セッション開始時の偏りを防ぐ）
+  const initialRotation = useMemo(() => generateInitialRotation(), []);
+  
   // ルーレットロジックのインスタンスを作成
-  const rouletteLogic = useMemo(() => createDefaultRouletteLogic(), []);
+  const rouletteLogic = useMemo(() => createDefaultRouletteLogic(undefined, initialRotation), [initialRotation]);
 
   const playTickSound = useCallback(() => {
     const now = Date.now();
