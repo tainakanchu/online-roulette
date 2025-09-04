@@ -8,6 +8,8 @@ import { useRouletteAnimation } from "./hooks/useRouletteAnimation";
 import { useSnackbar } from "./hooks/useSnackbar";
 import { Snackbar } from "./components/Snackbar";
 import { Footer } from "./components/Footer";
+import { RouletteHistory } from "./components/RouletteHistory";
+import { useRouletteHistory } from "./hooks/useRouletteHistory";
 
 // スタイルのインポート
 import "./styles/base.css";
@@ -18,18 +20,22 @@ import "./styles/components/RouletteActions.css";
 import "./styles/components/Snackbar.css";
 import "./styles/themes/dark.css";
 import "./styles/responsive.css";
+import "./styles/components/RouletteHistory.css";
 
 function App() {
   const canvasRef = useRef<RouletteCanvasRef>(null);
   const { optionsText, options, hasOptions, handleOptionsChange } =
     useRouletteOptions();
+  const { history, addHistoryEntry, clearHistory } = useRouletteHistory();
   const { currentOption, isSpinning, rotation, spin } = useRouletteAnimation({
     options,
+    onFinish: addHistoryEntry,
   });
   const { isVisible, message, showSnackbar, hideSnackbar } = useSnackbar();
 
   return (
     <div className="container">
+      <RouletteHistory history={history} onClear={clearHistory} />
       <h1 className="main-title">🎯 Lucky Roulette</h1>
 
       <RouletteInput

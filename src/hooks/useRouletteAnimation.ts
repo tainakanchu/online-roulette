@@ -6,10 +6,12 @@ const MIN_TICK_INTERVAL_MS = 30;
 
 interface UseRouletteAnimationProps {
   options: string[];
+  onFinish?: (result: string) => void;
 }
 
 export const useRouletteAnimation = ({
   options,
+  onFinish,
 }: UseRouletteAnimationProps) => {
   const [currentOption, setCurrentOption] = useState("");
   const [isSpinning, setIsSpinning] = useState(false);
@@ -69,8 +71,10 @@ export const useRouletteAnimation = ({
           options,
           finalRotation
         );
-        setCurrentOption(options[selectedIndex]);
+        const result = options[selectedIndex];
+        setCurrentOption(result);
         setIsSpinning(false);
+        onFinish?.(result);
       }
     };
 
@@ -81,7 +85,7 @@ export const useRouletteAnimation = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [options, isSpinning, rotation, rouletteLogic, playTickSound]);
+  }, [options, isSpinning, rotation, rouletteLogic, playTickSound, onFinish]);
 
   return {
     currentOption,
