@@ -24,7 +24,13 @@ import "./styles/components/RouletteHistory.css";
 
 function App() {
   const canvasRef = useRef<RouletteCanvasRef>(null);
-  const { optionsText, options, hasOptions, handleOptionsChange } =
+  const {
+    optionsText,
+    options,
+    hasOptions,
+    handleOptionsChange,
+    shuffleOptions,
+  } =
     useRouletteOptions();
   const { history, addHistoryEntry, clearHistory } = useRouletteHistory();
   const { currentOption, isSpinning, rotation, spin } = useRouletteAnimation({
@@ -41,6 +47,8 @@ function App() {
       <RouletteInput
         optionsText={optionsText}
         onChange={handleOptionsChange}
+        onShuffle={shuffleOptions}
+        canShuffle={hasOptions && !isSpinning}
         disabled={isSpinning}
       />
 

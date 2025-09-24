@@ -1,4 +1,18 @@
-import { useState, useCallback, useMemo } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  type ChangeEvent,
+} from "react";
+
+const shuffleArray = (items: string[]) => {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 export const useRouletteOptions = () => {
   const [optionsText, setOptionsText] = useState(() => {
@@ -35,7 +49,7 @@ export const useRouletteOptions = () => {
 
   // テキストエリアの変更時にURLも更新
   const handleOptionsChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    (e: ChangeEvent<HTMLTextAreaElement>) => {
       const newText = e.target.value;
       setOptionsText(newText);
       updateURL(newText);
@@ -43,10 +57,29 @@ export const useRouletteOptions = () => {
     [updateURL]
   );
 
+  const shuffleOptions = useCallback(() => {
+    setOptionsText((prevText) => {
+      const optionsToShuffle = prevText
+        .split("\n")
+        .map((option) => option.trim())
+        .filter((option) => option.length > 0);
+
+      if (optionsToShuffle.length <= 1) {
+        return prevText;
+      }
+
+      const shuffled = shuffleArray(optionsToShuffle);
+      const newText = shuffled.join("\n");
+      updateURL(newText);
+      return newText;
+    });
+  }, [updateURL]);
+
   return {
     optionsText,
     options,
     hasOptions,
     handleOptionsChange,
+    shuffleOptions,
   };
 };

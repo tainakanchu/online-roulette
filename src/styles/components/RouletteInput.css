@@ -16,4 +16,31 @@
   background-color: #f5f5f5;
   opacity: 0.7;
   cursor: not-allowed;
-} 
+}
+
+.input-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.shuffle-button {
+  padding: 8px 20px;
+  font-size: 14px;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s, opacity 0.3s;
+}
+
+.shuffle-button:hover:not(:disabled) {
+  background-color: #1976d2;
+}
+
+.shuffle-button:disabled {
+  background-color: #b0bec5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}

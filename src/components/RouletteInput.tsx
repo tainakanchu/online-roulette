@@ -1,12 +1,18 @@
+import { type ChangeEvent, type FC } from "react";
+
 interface RouletteInputProps {
   optionsText: string;
-  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+  onShuffle: () => void;
+  canShuffle: boolean;
   disabled?: boolean;
 }
 
-export const RouletteInput: React.FC<RouletteInputProps> = ({
+export const RouletteInput: FC<RouletteInputProps> = ({
   optionsText,
   onChange,
+  onShuffle,
+  canShuffle,
   disabled = false,
 }) => {
   return (
@@ -20,6 +26,16 @@ export const RouletteInput: React.FC<RouletteInputProps> = ({
         rows={5}
         className="options-input"
       />
+      <div className="input-actions">
+        <button
+          type="button"
+          onClick={onShuffle}
+          disabled={!canShuffle}
+          className="shuffle-button"
+        >
+          シャッフル
+        </button>
+      </div>
       <p className="help-text">
         ※
         URLのoptionsクエリパラメータでカンマ区切りの選択肢を指定することもできます
