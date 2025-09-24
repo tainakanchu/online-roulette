@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { RouletteCanvas, RouletteCanvasRef } from "./components/RouletteCanvas";
 import { RouletteResult } from "./components/RouletteResult";
 import { RouletteInput } from "./components/RouletteInput";
@@ -33,11 +33,16 @@ function App() {
   } =
     useRouletteOptions();
   const { history, addHistoryEntry, clearHistory } = useRouletteHistory();
-  const { currentOption, isSpinning, rotation, spin } = useRouletteAnimation({
-    options,
-    onFinish: addHistoryEntry,
-  });
+  const { currentOption, isSpinning, rotation, spin, displayOptions } =
+    useRouletteAnimation({
+      options,
+      onFinish: addHistoryEntry,
+    });
   const { isVisible, message, showSnackbar, hideSnackbar } = useSnackbar();
+
+  const handleShuffle = useCallback(() => {
+    shuffleOptions();
+  }, [shuffleOptions]);
 
   return (
     <div className="container">
@@ -47,8 +52,8 @@ function App() {
       <RouletteInput
         optionsText={optionsText}
         onChange={handleOptionsChange}
-        onShuffle={shuffleOptions}
-        canShuffle={hasOptions && !isSpinning}
+        onShuffle={handleShuffle}
+        canShuffle={options.length > 1 && !isSpinning}
         disabled={isSpinning}
       />
 
@@ -56,7 +61,7 @@ function App() {
         <div className="canvas-container">
           <RouletteCanvas
             ref={canvasRef}
-            options={options}
+            options={displayOptions}
             rotation={rotation}
           />
           <RouletteActions

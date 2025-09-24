@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { createDefaultRouletteLogic } from "../logic/roulette";
 
 // 音を鳴らす最小間隔（ミリ秒）
@@ -16,6 +16,7 @@ export const useRouletteAnimation = ({
   const [currentOption, setCurrentOption] = useState("");
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
+  const [displayOptions, setDisplayOptions] = useState<string[]>(options);
   const animationRef = useRef<number>();
   const lastTickRef = useRef<number>(0);
   const lastTickTimeRef = useRef<number>(0);
@@ -41,10 +42,12 @@ export const useRouletteAnimation = ({
     if (!options.length || isSpinning) return;
 
     setIsSpinning(true);
+    setDisplayOptions(options);
     const startRotation = rotation;
     const { totalRotation, duration } = rouletteLogic.calculateRotation();
     const startTime = Date.now();
-    const segmentAngle = 360 / options.length;
+    const activeOptions = options;
+    const segmentAngle = 360 / activeOptions.length;
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
@@ -68,10 +71,10 @@ export const useRouletteAnimation = ({
         setRotation(finalRotation);
 
         const selectedIndex = rouletteLogic.calculateSelectedIndex(
-          options,
+          activeOptions,
           finalRotation
         );
-        const result = options[selectedIndex];
+        const result = activeOptions[selectedIndex];
         setCurrentOption(result);
         setIsSpinning(false);
         onFinish?.(result);
@@ -87,10 +90,23 @@ export const useRouletteAnimation = ({
     };
   }, [options, isSpinning, rotation, rouletteLogic, playTickSound, onFinish]);
 
+  useEffect(() => {
+    if (isSpinning) {
+      return;
+    }
+
+    if (currentOption !== "") {
+      return;
+    }
+
+    setDisplayOptions(options);
+  }, [options, isSpinning, currentOption]);
+
   return {
     currentOption,
     isSpinning,
     rotation,
     spin,
+    displayOptions,
   };
 };
