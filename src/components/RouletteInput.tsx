@@ -6,6 +6,8 @@ interface RouletteInputProps {
   onShuffle: () => void;
   canShuffle: boolean;
   disabled?: boolean;
+  shuffleCount: number;
+  onShuffleCountChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const RouletteInput: FC<RouletteInputProps> = ({
@@ -14,6 +16,8 @@ export const RouletteInput: FC<RouletteInputProps> = ({
   onShuffle,
   canShuffle,
   disabled = false,
+  shuffleCount,
+  onShuffleCountChange,
 }) => {
   return (
     <div className="input-section">
@@ -27,6 +31,20 @@ export const RouletteInput: FC<RouletteInputProps> = ({
         className="options-input"
       />
       <div className="input-actions">
+        <div className="shuffle-controls">
+          <label htmlFor="shuffle-count" className="shuffle-count-label">
+            シャッフル回数:
+          </label>
+          <input
+            id="shuffle-count"
+            type="number"
+            min="1"
+            value={shuffleCount}
+            onChange={onShuffleCountChange}
+            disabled={disabled}
+            className="shuffle-count-input"
+          />
+        </div>
         <button
           type="button"
           onClick={onShuffle}

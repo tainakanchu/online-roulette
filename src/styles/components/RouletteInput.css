@@ -21,7 +21,35 @@
 .input-actions {
   margin-top: 10px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.shuffle-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shuffle-count-label {
+  font-size: 14px;
+  color: #333;
+}
+
+.shuffle-count-input {
+  width: 60px;
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.shuffle-count-input:disabled {
+  background-color: #f5f5f5;
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .shuffle-button {

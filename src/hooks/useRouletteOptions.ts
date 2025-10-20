@@ -1,9 +1,4 @@
-import {
-  useState,
-  useCallback,
-  useMemo,
-  type ChangeEvent,
-} from "react";
+import { useState, useCallback, useMemo, type ChangeEvent } from "react";
 
 const shuffleArray = (items: string[]) => {
   const shuffled = [...items];
@@ -20,6 +15,8 @@ export const useRouletteOptions = () => {
     const queryOptions = params.get("options");
     return queryOptions ? queryOptions.split(",").join("\n") : "";
   });
+
+  const [shuffleCount, setShuffleCount] = useState(1);
 
   const options = useMemo(() => {
     return optionsText
@@ -57,23 +54,49 @@ export const useRouletteOptions = () => {
     [updateURL]
   );
 
-  const shuffleOptions = useCallback(() => {
-    setOptionsText((prevText) => {
-      const optionsToShuffle = prevText
-        .split("\n")
-        .map((option) => option.trim())
-        .filter((option) => option.length > 0);
-
-      if (optionsToShuffle.length <= 1) {
-        return prevText;
+  const handleShuffleCountChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const value = Number.parseInt(e.target.value, 10);
+      if (!Number.isNaN(value) && value >= 1) {
+        setShuffleCount(value);
       }
+    },
+    []
+  );
 
-      const shuffled = shuffleArray(optionsToShuffle);
-      const newText = shuffled.join("\n");
-      updateURL(newText);
-      return newText;
-    });
-  }, [updateURL]);
+  const shuffleOptions = useCallback(() => {
+    const optionsToShuffle = optionsText
+      .split("\n")
+      .map((option) => option.trim())
+      .filter((option) => option.length > 0);
+
+    if (optionsToShuffle.length <= 1) {
+      return;
+    }
+
+    let count = 0;
+
+    const intervalId = setInterval(() => {
+      setOptionsText((currentText) => {
+        const currentOptions = currentText
+          .split("\n")
+          .map((option) => option.trim())
+          .filter((option) => option.length > 0);
+
+        const shuffled = shuffleArray(currentOptions);
+        const nextText = shuffled.join("\n");
+
+        count += 1;
+        if (count >= shuffleCount) {
+          clearInterval(intervalId);
+          // 最後にURLを更新
+          updateURL(nextText);
+        }
+
+        return nextText;
+      });
+    }, 5);
+  }, [optionsText, shuffleCount, updateURL]);
 
   return {
     optionsText,
@@ -81,5 +104,7 @@ export const useRouletteOptions = () => {
     hasOptions,
     handleOptionsChange,
     shuffleOptions,
+    shuffleCount,
+    handleShuffleCountChange,
   };
 };

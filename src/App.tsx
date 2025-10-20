@@ -30,8 +30,9 @@ function App() {
     hasOptions,
     handleOptionsChange,
     shuffleOptions,
-  } =
-    useRouletteOptions();
+    shuffleCount,
+    handleShuffleCountChange,
+  } = useRouletteOptions();
   const { history, addHistoryEntry, clearHistory } = useRouletteHistory();
   const { currentOption, isSpinning, rotation, spin, displayOptions } =
     useRouletteAnimation({
@@ -55,6 +56,8 @@ function App() {
         onShuffle={handleShuffle}
         canShuffle={options.length > 1 && !isSpinning}
         disabled={isSpinning}
+        shuffleCount={shuffleCount}
+        onShuffleCountChange={handleShuffleCountChange}
       />
 
       <div className="roulette-section">
