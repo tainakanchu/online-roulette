@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo, type ChangeEvent } from "react";
+import { useState, useCallback, useMemo, useEffect, type ChangeEvent } from "react";
+import { readLocalStorage, writeLocalStorage } from "../utils/localStorage";
 
 const shuffleArray = (items: string[]) => {
   const shuffled = [...items];
@@ -9,6 +10,8 @@ const shuffleArray = (items: string[]) => {
   return shuffled;
 };
 
+const SHUFFLE_COUNT_STORAGE_KEY = "roulette-shuffle-count";
+
 export const useRouletteOptions = () => {
   const [optionsText, setOptionsText] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -16,7 +19,18 @@ export const useRouletteOptions = () => {
     return queryOptions ? queryOptions.split(",").join("\n") : "";
   });
 
-  const [shuffleCount, setShuffleCount] = useState(1);
+  const [shuffleCount, setShuffleCount] = useState(() => {
+    const storedValue = readLocalStorage(SHUFFLE_COUNT_STORAGE_KEY);
+    const parsedValue = storedValue ? Number.parseInt(storedValue, 10) : NaN;
+    if (!Number.isNaN(parsedValue) && parsedValue >= 1) {
+      return parsedValue;
+    }
+    return 1;
+  });
+
+  useEffect(() => {
+    writeLocalStorage(SHUFFLE_COUNT_STORAGE_KEY, shuffleCount.toString());
+  }, [shuffleCount]);
 
   const options = useMemo(() => {
     return optionsText
