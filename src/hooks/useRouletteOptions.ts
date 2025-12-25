@@ -11,6 +11,7 @@ const shuffleArray = (items: string[]) => {
 };
 
 const SHUFFLE_COUNT_STORAGE_KEY = "roulette-shuffle-count";
+const QUICK_MODE_STORAGE_KEY = "roulette-quick-mode";
 
 export const useRouletteOptions = () => {
   const [optionsText, setOptionsText] = useState(() => {
@@ -28,9 +29,18 @@ export const useRouletteOptions = () => {
     return 1;
   });
 
+  const [quickMode, setQuickMode] = useState(() => {
+    const storedValue = readLocalStorage(QUICK_MODE_STORAGE_KEY);
+    return storedValue === "true";
+  });
+
   useEffect(() => {
     writeLocalStorage(SHUFFLE_COUNT_STORAGE_KEY, shuffleCount.toString());
   }, [shuffleCount]);
+
+  useEffect(() => {
+    writeLocalStorage(QUICK_MODE_STORAGE_KEY, quickMode.toString());
+  }, [quickMode]);
 
   const options = useMemo(() => {
     return optionsText
@@ -78,6 +88,13 @@ export const useRouletteOptions = () => {
     []
   );
 
+  const handleQuickModeChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      setQuickMode(e.target.checked);
+    },
+    []
+  );
+
   const shuffleOptions = useCallback(() => {
     const optionsToShuffle = optionsText
       .split("\n")
@@ -120,5 +137,7 @@ export const useRouletteOptions = () => {
     shuffleOptions,
     shuffleCount,
     handleShuffleCountChange,
+    quickMode,
+    handleQuickModeChange,
   };
 };

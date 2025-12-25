@@ -12,6 +12,13 @@
   height: auto;
 }
 
+.spin-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
 .spin-button {
   padding: 10px 30px;
   font-size: 18px;

@@ -7,11 +7,13 @@ const MIN_TICK_INTERVAL_MS = 30;
 interface UseRouletteAnimationProps {
   options: string[];
   onFinish?: (result: string) => void;
+  quickMode?: boolean;
 }
 
 export const useRouletteAnimation = ({
   options,
   onFinish,
+  quickMode = false,
 }: UseRouletteAnimationProps) => {
   const [currentOption, setCurrentOption] = useState("");
   const [isSpinning, setIsSpinning] = useState(false);
@@ -44,7 +46,12 @@ export const useRouletteAnimation = ({
     setIsSpinning(true);
     setDisplayOptions(options);
     const startRotation = rotation;
-    const { totalRotation, duration } = rouletteLogic.calculateRotation();
+    const baseRotation = rouletteLogic.calculateRotation();
+    // 時短モードの場合はアニメーション時間と回転数を短縮
+    const totalRotation = quickMode
+      ? baseRotation.totalRotation * 0.4
+      : baseRotation.totalRotation;
+    const duration = quickMode ? baseRotation.duration * 0.4 : baseRotation.duration;
     const startTime = Date.now();
     const activeOptions = options;
     const segmentAngle = 360 / activeOptions.length;
@@ -88,7 +95,7 @@ export const useRouletteAnimation = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [options, isSpinning, rotation, rouletteLogic, playTickSound, onFinish]);
+  }, [options, isSpinning, rotation, rouletteLogic, playTickSound, onFinish, quickMode]);
 
   useEffect(() => {
     if (isSpinning) {

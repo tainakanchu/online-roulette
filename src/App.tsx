@@ -32,12 +32,15 @@ function App() {
     shuffleOptions,
     shuffleCount,
     handleShuffleCountChange,
+    quickMode,
+    handleQuickModeChange,
   } = useRouletteOptions();
   const { history, addHistoryEntry, clearHistory } = useRouletteHistory();
   const { currentOption, isSpinning, rotation, spin, displayOptions } =
     useRouletteAnimation({
       options,
       onFinish: addHistoryEntry,
+      quickMode,
     });
   const { isVisible, message, showSnackbar, hideSnackbar } = useSnackbar();
 
@@ -75,13 +78,25 @@ function App() {
           />
         </div>
         <RouletteResult isSpinning={isSpinning} currentOption={currentOption} />
-        <button
-          onClick={spin}
-          disabled={!hasOptions || isSpinning}
-          className="spin-button"
-        >
-          回す
-        </button>
+        <div className="spin-controls">
+          <button
+            onClick={spin}
+            disabled={!hasOptions || isSpinning}
+            className="spin-button"
+          >
+            回す
+          </button>
+          <label className="quick-mode-label">
+            <input
+              type="checkbox"
+              checked={quickMode}
+              onChange={handleQuickModeChange}
+              disabled={isSpinning}
+              className="quick-mode-checkbox"
+            />
+            時短モード
+          </label>
+        </div>
       </div>
 
       <Footer />
