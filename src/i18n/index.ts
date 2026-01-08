@@ -5,11 +5,15 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import jaTranslation from "./locales/ja/translation.json";
 import enTranslation from "./locales/en/translation.json";
 import zhTWTranslation from "./locales/zh-TW/translation.json";
+import zhHKTranslation from "./locales/zh-HK/translation.json";
+import idTranslation from "./locales/id/translation.json";
 
 const resources = {
   ja: { translation: jaTranslation },
   en: { translation: enTranslation },
   "zh-TW": { translation: zhTWTranslation },
+  "zh-HK": { translation: zhHKTranslation },
+  id: { translation: idTranslation },
 };
 
 i18n
@@ -18,7 +22,8 @@ i18n
   .init({
     resources,
     fallbackLng: "ja",
-    supportedLngs: ["ja", "en", "zh-TW"],
+    supportedLngs: ["ja", "en", "zh-TW", "zh-HK", "id"],
+    load: "currentOnly",
     interpolation: {
       escapeValue: false,
     },

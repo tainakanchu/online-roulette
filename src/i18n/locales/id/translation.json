@@ -1,0 +1,37 @@
+{
+  "app": {
+    "title": "Lucky Roulette",
+    "spin": "Putar",
+    "quickMode": "Mode Cepat"
+  },
+  "input": {
+    "title": "Masukkan pilihan Anda",
+    "placeholder": "Masukkan pilihan yang dipisahkan dengan baris baru",
+    "shuffleCount": "Jumlah acak:",
+    "shuffle": "Acak",
+    "helpText": "* Anda juga dapat menentukan pilihan yang dipisahkan koma melalui parameter options di URL",
+    "helpExample": "Contoh: ?options=Pilihan1,Pilihan2,Pilihan3"
+  },
+  "result": {
+    "selecting": "Memilih...",
+    "label": "Hasil",
+    "default": "Hasil akan muncul di sini"
+  },
+  "actions": {
+    "copySuccess": "Gambar hasil disalin ke clipboard!",
+    "copyError": "Gagal menyalin ke clipboard.",
+    "downloadSuccess": "Gambar hasil diunduh!",
+    "downloadError": "Gagal mengunduh gambar.",
+    "copyTitle": "Salin gambar hasil ke clipboard",
+    "downloadTitle": "Unduh gambar hasil"
+  },
+  "history": {
+    "toggle": "Riwayat",
+    "title": "Riwayat Kemenangan",
+    "close": "Tutup",
+    "empty": "Belum ada riwayat",
+    "clearAll": "Hapus semua",
+    "clearConfirm": "Hapus semua riwayat?",
+    "showHistory": "Tampilkan riwayat"
+  }
+}

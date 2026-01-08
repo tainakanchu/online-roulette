@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 const LANGUAGES = [
   { code: "ja", label: "日本語" },
   { code: "en", label: "English" },
-  { code: "zh-TW", label: "繁體中文" },
+  { code: "zh-TW", label: "繁體中文(台灣)" },
+  { code: "zh-HK", label: "繁體中文(香港)" },
+  { code: "id", label: "Bahasa Indonesia" },
 ];
 
 export const LanguageSwitcher: React.FC = () => {
