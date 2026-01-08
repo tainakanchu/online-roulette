@@ -1,6 +1,8 @@
 export const generateRouletteResultImage = async (
   canvasElement: HTMLCanvasElement,
-  resultText: string
+  resultText: string,
+  resultLabel: string,
+  language: string
 ): Promise<Blob> => {
   // 新しいキャンバスを作成して結果画像を生成
   const canvas = document.createElement("canvas");
@@ -55,7 +57,7 @@ export const generateRouletteResultImage = async (
   // "結果" ラベルを描画
   ctx.fillStyle = "#6c757d";
   ctx.font = "bold 20px sans-serif";
-  ctx.fillText("結果", width / 2, resultY + 10);
+  ctx.fillText(resultLabel, width / 2, resultY + 10);
 
   // 結果テキストを描画
   ctx.fillStyle = "#212529";
@@ -64,7 +66,7 @@ export const generateRouletteResultImage = async (
 
   // 日時を描画
   const now = new Date();
-  const dateString = now.toLocaleString("ja-JP");
+  const dateString = now.toLocaleString(language);
   ctx.fillStyle = "#6c757d";
   ctx.font = "16px sans-serif";
   ctx.fillText(dateString, width / 2, height - 30);
@@ -87,7 +89,7 @@ export const copyImageToClipboard = async (blob: Blob): Promise<void> => {
     await navigator.clipboard.write([clipboardItem]);
   } catch (error) {
     console.error("Failed to copy image to clipboard:", error);
-    throw new Error("クリップボードへのコピーに失敗しました");
+    throw new Error("Failed to copy to clipboard");
   }
 };
 

@@ -1,4 +1,5 @@
 import { useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { RouletteCanvas, RouletteCanvasRef } from "./components/RouletteCanvas";
 import { RouletteResult } from "./components/RouletteResult";
 import { RouletteInput } from "./components/RouletteInput";
@@ -10,6 +11,7 @@ import { Snackbar } from "./components/Snackbar";
 import { Footer } from "./components/Footer";
 import { RouletteHistory } from "./components/RouletteHistory";
 import { useRouletteHistory } from "./hooks/useRouletteHistory";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
 
 // スタイルのインポート
 import "./styles/base.css";
@@ -21,8 +23,10 @@ import "./styles/components/Snackbar.css";
 import "./styles/themes/dark.css";
 import "./styles/responsive.css";
 import "./styles/components/RouletteHistory.css";
+import "./styles/components/LanguageSwitcher.css";
 
 function App() {
+  const { t } = useTranslation();
   const canvasRef = useRef<RouletteCanvasRef>(null);
   const {
     optionsText,
@@ -50,6 +54,7 @@ function App() {
 
   return (
     <div className="container">
+      <LanguageSwitcher />
       <RouletteHistory history={history} onClear={clearHistory} />
       <h1 className="main-title">🎯 Lucky Roulette</h1>
 
@@ -84,7 +89,7 @@ function App() {
             disabled={!hasOptions || isSpinning}
             className="spin-button"
           >
-            回す
+            {t("app.spin")}
           </button>
           <label className="quick-mode-label">
             <input
@@ -94,7 +99,7 @@ function App() {
               disabled={isSpinning}
               className="quick-mode-checkbox"
             />
-            時短モード
+            {t("app.quickMode")}
           </label>
         </div>
       </div>

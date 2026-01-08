@@ -1,0 +1,37 @@
+{
+  "app": {
+    "title": "Lucky Roulette",
+    "spin": "Spin",
+    "quickMode": "Quick Mode"
+  },
+  "input": {
+    "title": "Enter your options",
+    "placeholder": "Enter options separated by line breaks",
+    "shuffleCount": "Shuffle count:",
+    "shuffle": "Shuffle",
+    "helpText": "* You can also specify comma-separated options via the URL's options query parameter",
+    "helpExample": "Example: ?options=Option1,Option2,Option3"
+  },
+  "result": {
+    "selecting": "Selecting...",
+    "label": "Result",
+    "default": "Result will appear here"
+  },
+  "actions": {
+    "copySuccess": "Result image copied to clipboard!",
+    "copyError": "Failed to copy to clipboard.",
+    "downloadSuccess": "Result image downloaded!",
+    "downloadError": "Failed to download image.",
+    "copyTitle": "Copy result image to clipboard",
+    "downloadTitle": "Download result image"
+  },
+  "history": {
+    "toggle": "History",
+    "title": "Win History",
+    "close": "Close",
+    "empty": "No history yet",
+    "clearAll": "Clear all",
+    "clearConfirm": "Clear all history?",
+    "showHistory": "Show history"
+  }
+}

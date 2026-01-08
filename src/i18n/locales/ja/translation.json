@@ -1,0 +1,37 @@
+{
+  "app": {
+    "title": "Lucky Roulette",
+    "spin": "回す",
+    "quickMode": "時短モード"
+  },
+  "input": {
+    "title": "選択肢を入力してください",
+    "placeholder": "選択肢を改行で区切って入力してください",
+    "shuffleCount": "シャッフル回数:",
+    "shuffle": "シャッフル",
+    "helpText": "※ URLのoptionsクエリパラメータでカンマ区切りの選択肢を指定することもできます",
+    "helpExample": "例: ?options=選択肢1,選択肢2,選択肢3"
+  },
+  "result": {
+    "selecting": "選択中...",
+    "label": "結果",
+    "default": "結果がここに表示されます"
+  },
+  "actions": {
+    "copySuccess": "結果画像をクリップボードにコピーしました!",
+    "copyError": "クリップボードへのコピーに失敗しました。",
+    "downloadSuccess": "結果画像をダウンロードしました!",
+    "downloadError": "画像のダウンロードに失敗しました。",
+    "copyTitle": "結果画像をクリップボードにコピー",
+    "downloadTitle": "結果画像をダウンロード"
+  },
+  "history": {
+    "toggle": "履歴",
+    "title": "当選履歴",
+    "close": "閉じる",
+    "empty": "まだ履歴がありません",
+    "clearAll": "すべて削除",
+    "clearConfirm": "履歴をすべて削除しますか?",
+    "showHistory": "履歴を表示"
+  }
+}

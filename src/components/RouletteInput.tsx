@@ -1,4 +1,5 @@
 import { type ChangeEvent, type FC } from "react";
+import { useTranslation } from "react-i18next";
 
 interface RouletteInputProps {
   optionsText: string;
@@ -19,21 +20,23 @@ export const RouletteInput: FC<RouletteInputProps> = ({
   shuffleCount,
   onShuffleCountChange,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="input-section">
-      <h2 className="section-title">選択肢を入力してください</h2>
+      <h2 className="section-title">{t("input.title")}</h2>
       <textarea
         value={optionsText}
         onChange={onChange}
         disabled={disabled}
-        placeholder="選択肢を改行で区切って入力してください"
+        placeholder={t("input.placeholder")}
         rows={5}
         className="options-input"
       />
       <div className="input-actions">
         <div className="shuffle-controls">
           <label htmlFor="shuffle-count" className="shuffle-count-label">
-            シャッフル回数:
+            {t("input.shuffleCount")}
           </label>
           <input
             id="shuffle-count"
@@ -51,14 +54,13 @@ export const RouletteInput: FC<RouletteInputProps> = ({
           disabled={!canShuffle}
           className="shuffle-button"
         >
-          シャッフル
+          {t("input.shuffle")}
         </button>
       </div>
       <p className="help-text">
-        ※
-        URLのoptionsクエリパラメータでカンマ区切りの選択肢を指定することもできます
+        {t("input.helpText")}
         <br />
-        例: ?options=選択肢1,選択肢2,選択肢3
+        {t("input.helpExample")}
       </p>
     </div>
   );

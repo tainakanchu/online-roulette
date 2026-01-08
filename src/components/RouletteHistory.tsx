@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { RouletteHistory as RouletteHistoryType } from "../types/history";
 
 interface RouletteHistoryProps {
@@ -7,11 +8,12 @@ interface RouletteHistoryProps {
 }
 
 export const RouletteHistory = ({ history, onClear }: RouletteHistoryProps) => {
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString("ja-JP", {
+    return date.toLocaleDateString(i18n.language, {
       month: "numeric",
       day: "numeric",
       hour: "2-digit",
@@ -21,26 +23,24 @@ export const RouletteHistory = ({ history, onClear }: RouletteHistoryProps) => {
 
   return (
     <>
-      <button 
+      <button
         className="history-toggle-button"
         onClick={() => setIsOpen(!isOpen)}
-        aria-label="履歴を表示"
+        aria-label={t("history.showHistory")}
       >
-        📜 履歴 {history.entries.length > 0 && `(${history.entries.length})`}
+        📜 {t("history.toggle")}{" "}
+        {history.entries.length > 0 && `(${history.entries.length})`}
       </button>
 
       {isOpen && (
         <div className="history-modal-overlay" onClick={() => setIsOpen(false)}>
-          <div 
-            className="history-modal" 
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="history-modal" onClick={(e) => e.stopPropagation()}>
             <div className="history-header">
-              <h2>🎯 当選履歴</h2>
+              <h2>🎯 {t("history.title")}</h2>
               <button
                 className="history-close-button"
                 onClick={() => setIsOpen(false)}
-                aria-label="閉じる"
+                aria-label={t("history.close")}
               >
                 ✕
               </button>
@@ -48,24 +48,27 @@ export const RouletteHistory = ({ history, onClear }: RouletteHistoryProps) => {
 
             <div className="history-content">
               {history.entries.length === 0 ? (
-                <p className="history-empty">まだ履歴がありません</p>
+                <p className="history-empty">{t("history.empty")}</p>
               ) : (
                 <>
                   <div className="history-actions">
                     <button
                       className="history-clear-button"
                       onClick={() => {
-                        if (window.confirm("履歴をすべて削除しますか？")) {
+                        if (window.confirm(t("history.clearConfirm"))) {
                           onClear();
                         }
                       }}
                     >
-                      すべて削除
+                      {t("history.clearAll")}
                     </button>
                   </div>
                   <ul className="history-list">
                     {history.entries.map((entry, index) => (
-                      <li key={`${entry.timestamp}-${index}`} className="history-item">
+                      <li
+                        key={`${entry.timestamp}-${index}`}
+                        className="history-item"
+                      >
                         <span className="history-result">{entry.result}</span>
                         <span className="history-date">
                           {formatDate(entry.timestamp)}

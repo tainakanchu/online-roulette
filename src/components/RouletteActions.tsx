@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   generateRouletteResultImage,
   copyImageToClipboard,
@@ -18,6 +19,7 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
   isVisible,
   onSuccess,
 }) => {
+  const { t, i18n } = useTranslation();
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleCopyToClipboard = async () => {
@@ -27,13 +29,15 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
     try {
       const imageBlob = await generateRouletteResultImage(
         canvasElement,
-        currentOption
+        currentOption,
+        t("result.label"),
+        i18n.language
       );
       await copyImageToClipboard(imageBlob);
-      onSuccess("結果画像をクリップボードにコピーしました！");
+      onSuccess(t("actions.copySuccess"));
     } catch (error) {
       console.error("Error copying to clipboard:", error);
-      onSuccess("クリップボードへのコピーに失敗しました。");
+      onSuccess(t("actions.copyError"));
     } finally {
       setIsGenerating(false);
     }
@@ -46,7 +50,9 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
     try {
       const imageBlob = await generateRouletteResultImage(
         canvasElement,
-        currentOption
+        currentOption,
+        t("result.label"),
+        i18n.language
       );
       const now = new Date();
       const filename = `roulette-result-${now.getFullYear()}${(
@@ -58,10 +64,10 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
         .toString()
         .padStart(2, "0")}${now.getMinutes().toString().padStart(2, "0")}.png`;
       downloadImage(imageBlob, filename);
-      onSuccess("結果画像をダウンロードしました！");
+      onSuccess(t("actions.downloadSuccess"));
     } catch (error) {
       console.error("Error downloading image:", error);
-      onSuccess("画像のダウンロードに失敗しました。");
+      onSuccess(t("actions.downloadError"));
     } finally {
       setIsGenerating(false);
     }
@@ -75,7 +81,7 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
         onClick={handleCopyToClipboard}
         disabled={isGenerating}
         className="action-button copy-action"
-        title="結果画像をクリップボードにコピー"
+        title={t("actions.copyTitle")}
       >
         📋
       </button>
@@ -83,7 +89,7 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
         onClick={handleDownload}
         disabled={isGenerating}
         className="action-button download-action"
-        title="結果画像をダウンロード"
+        title={t("actions.downloadTitle")}
       >
         💾
       </button>
