@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, type ChangeEvent } from "react";
 import { readLocalStorage, writeLocalStorage } from "../utils/localStorage";
+import { useShakeSound } from "./useShakeSound";
 
 const shuffleArray = (items: string[]) => {
   const shuffled = [...items];
@@ -14,6 +15,7 @@ const SHUFFLE_COUNT_STORAGE_KEY = "roulette-shuffle-count";
 const QUICK_MODE_STORAGE_KEY = "roulette-quick-mode";
 
 export const useRouletteOptions = () => {
+  const shakeSound = useShakeSound();
   const [optionsText, setOptionsText] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const queryOptions = params.get("options");
@@ -105,9 +107,13 @@ export const useRouletteOptions = () => {
       return;
     }
 
+    // おみくじを振るような「シャカシャカ」音を開始
+    shakeSound.start();
     let count = 0;
 
     const intervalId = setInterval(() => {
+      count += 1;
+
       setOptionsText((currentText) => {
         const currentOptions = currentText
           .split("\n")
@@ -117,9 +123,9 @@ export const useRouletteOptions = () => {
         const shuffled = shuffleArray(currentOptions);
         const nextText = shuffled.join("\n");
 
-        count += 1;
         if (count >= shuffleCount) {
           clearInterval(intervalId);
+          shakeSound.stop();
           // 最後にURLを更新
           updateURL(nextText);
         }
@@ -127,7 +133,7 @@ export const useRouletteOptions = () => {
         return nextText;
       });
     }, 5);
-  }, [optionsText, shuffleCount, updateURL]);
+  }, [optionsText, shuffleCount, updateURL, shakeSound]);
 
   return {
     optionsText,
