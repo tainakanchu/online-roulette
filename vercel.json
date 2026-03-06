@@ -1,0 +1,5 @@
+{
+  "buildCommand": "pnpm --filter @tainakanchu/roulette-web build",
+  "outputDirectory": "packages/web/dist",
+  "installCommand": "pnpm install"
+}
