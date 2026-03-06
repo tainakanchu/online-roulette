@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { RouletteHistory as RouletteHistoryType } from "../core/types";
+import type { RouletteHistory as RouletteHistoryType } from "@roulette/core";
 
 interface RouletteHistoryProps {
   history: RouletteHistoryType;

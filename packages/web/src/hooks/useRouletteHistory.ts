@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { historyStorage } from "../utils/historyStorage";
-import type { RouletteHistory } from "../core/types";
+import type { RouletteHistory } from "@roulette/core";
 
 export const useRouletteHistory = () => {
   const [history, setHistory] = useState<RouletteHistory>({ entries: [] });

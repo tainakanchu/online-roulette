@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
-import { createDefaultRouletteLogic } from "../core/roulette";
+import { createDefaultRouletteLogic } from "@roulette/core";
 
 // 音を鳴らす最小間隔（ミリ秒）
 const MIN_TICK_INTERVAL_MS = 30;
