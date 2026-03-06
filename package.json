@@ -4,11 +4,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @roulette/web dev",
-    "build": "pnpm --filter @roulette/web build",
+    "dev": "pnpm --filter @tainakanchu/roulette-web dev",
+    "build": "pnpm --filter @tainakanchu/roulette-web build",
     "type-check": "pnpm -r type-check",
-    "lint": "pnpm --filter @roulette/web lint",
-    "preview": "pnpm --filter @roulette/web preview",
-    "test": "pnpm -r test"
+    "lint": "pnpm --filter @tainakanchu/roulette-web lint",
+    "preview": "pnpm --filter @tainakanchu/roulette-web preview",
+    "test": "pnpm -r test",
+    "cli": "tsx --tsconfig packages/cli/tsconfig.json packages/cli/src/index.tsx",
+    "publish:cli": "pnpm --filter @tainakanchu/roulette-cli build && lerna publish"
+  },
+  "devDependencies": {
+    "@lerna-lite/cli": "^4.11.3",
+    "@lerna-lite/publish": "^4.11.3",
+    "tsx": "^4.19.0"
   }
 }
