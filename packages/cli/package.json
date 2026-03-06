@@ -9,6 +9,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "tsx src/index.tsx",
     "build": "tsup",
@@ -27,5 +30,4 @@
     "tsup": "^8.5.1",
     "tsx": "^4.19.0",
     "typescript": "~5.6.2"
-  }
-}
+  }}
