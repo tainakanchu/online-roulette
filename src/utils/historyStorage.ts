@@ -1,4 +1,4 @@
-import type { RouletteHistoryEntry, RouletteHistory } from "../types/history";
+import type { RouletteHistoryEntry, RouletteHistory } from "../core/types";
 
 const STORAGE_KEY = "roulette-history";
 const MAX_HISTORY_SIZE = 100;

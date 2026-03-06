@@ -1,4 +1,4 @@
-import { createDefaultRouletteLogic } from "../logic/roulette";
+import { createDefaultRouletteLogic } from "../core/roulette";
 
 describe("RouletteLogic", () => {
   describe("calculateRotation", () => {

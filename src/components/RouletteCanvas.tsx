@@ -5,7 +5,7 @@ import {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { COLORS, getColorBrightness } from "../constants/colors";
+import { COLORS, getColorBrightness } from "../core/colors";
 import { useWindowSize } from "../hooks/useWindowSize";
 
 interface RouletteCanvasProps {

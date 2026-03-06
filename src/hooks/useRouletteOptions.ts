@@ -2,14 +2,7 @@ import { useState, useCallback, useMemo, useEffect, type ChangeEvent } from "rea
 import { readLocalStorage, writeLocalStorage } from "../utils/localStorage";
 import { useShakeSound } from "./useShakeSound";
 
-const shuffleArray = (items: string[]) => {
-  const shuffled = [...items];
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
+import { shuffleArray } from "../core/shuffle";
 
 const SHUFFLE_COUNT_STORAGE_KEY = "roulette-shuffle-count";
 const QUICK_MODE_STORAGE_KEY = "roulette-quick-mode";
