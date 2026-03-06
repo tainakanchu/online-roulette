@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect, type ChangeEvent } from "rea
 import { readLocalStorage, writeLocalStorage } from "../utils/localStorage";
 import { useShakeSound } from "./useShakeSound";
 
-import { shuffleArray } from "@roulette/core";
+import { shuffleArray } from "@tainakanchu/roulette-core";
 
 const SHUFFLE_COUNT_STORAGE_KEY = "roulette-shuffle-count";
 const QUICK_MODE_STORAGE_KEY = "roulette-quick-mode";
