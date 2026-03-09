@@ -33,7 +33,7 @@ export const App = ({
 
   const handleOptionsSubmit = (submitted: string[]) => {
     setOptions(submitted);
-    setPhase("confirm");
+    setPhase(shuffle ? "shuffling" : "confirm");
   };
 
   const handleConfirmShuffle = useCallback((shuffled: string[]) => {
