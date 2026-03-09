@@ -27,6 +27,7 @@ export const Result = ({ result, options }: ResultProps) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       exit();
+      process.exit(0);
     }, 100);
     return () => clearTimeout(timer);
   }, [exit]);

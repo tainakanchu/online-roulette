@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Box, Text, useStdin } from "ink";
+import { shuffleArray } from "@tainakanchu/roulette-core";
 
 interface OptionsInputProps {
   onSubmit: (options: string[]) => void;
@@ -57,6 +58,23 @@ export const OptionsInput = ({ onSubmit }: OptionsInputProps) => {
       // 通常入力: Ctrl+C
       if (input === "\x03") {
         process.exit(0);
+      }
+
+      // 通常入力: S でシャッフル（入力が空かつ2つ以上ある場合）
+      if (input === "s" || input === "S") {
+        setCurrent((prev) => {
+          if (prev === "") {
+            setItems((prevItems) => {
+              if (prevItems.length >= 2) {
+                return shuffleArray(prevItems);
+              }
+              return prevItems;
+            });
+            return "";
+          }
+          return prev + input;
+        });
+        return;
       }
 
       // 通常入力: Enter
@@ -142,9 +160,13 @@ export const OptionsInput = ({ onSubmit }: OptionsInputProps) => {
           <Text color="gray">█</Text>
         </Text>
       </Box>
-      {items.length < 2 && (
+      {items.length < 2 ? (
         <Box marginTop={1}>
           <Text dimColor>(At least 2 options required)</Text>
+        </Box>
+      ) : (
+        <Box marginTop={1}>
+          <Text dimColor>(Enter to spin, S to shuffle)</Text>
         </Box>
       )}
     </Box>
