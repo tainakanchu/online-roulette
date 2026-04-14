@@ -25,6 +25,24 @@
     "copyTitle": "Copy result image to clipboard",
     "downloadTitle": "Download result image"
   },
+  "mode": {
+    "roulette": "Roulette",
+    "grouping": "Group Division"
+  },
+  "grouping": {
+    "groupCount": "Groups:",
+    "theme": "Theme:",
+    "themes": {
+      "random": "Simple",
+      "zodiac": "Zodiac",
+      "element": "Element",
+      "color": "Color Team"
+    },
+    "divide": "Divide into Groups",
+    "dividing": "Dividing...",
+    "resultTitle": "Group Division Result",
+    "members": "{{count}} members"
+  },
   "history": {
     "toggle": "History",
     "title": "Win History",

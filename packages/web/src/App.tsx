@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { RouletteCanvas, RouletteCanvasRef } from "./components/RouletteCanvas";
 import { RouletteResult } from "./components/RouletteResult";
@@ -12,6 +12,11 @@ import { Footer } from "./components/Footer";
 import { RouletteHistory } from "./components/RouletteHistory";
 import { useRouletteHistory } from "./hooks/useRouletteHistory";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { ModeSwitcher, type AppMode } from "./components/ModeSwitcher";
+import { GroupControls } from "./components/GroupControls";
+import { GroupAnimation } from "./components/GroupAnimation";
+import { GroupResultDisplay } from "./components/GroupResultDisplay";
+import { useGroupDivision } from "./hooks/useGroupDivision";
 
 // スタイルのインポート
 import "./styles/base.css";
@@ -20,13 +25,18 @@ import "./styles/components/RouletteCanvas.css";
 import "./styles/components/RouletteResult.css";
 import "./styles/components/RouletteActions.css";
 import "./styles/components/Snackbar.css";
-import "./styles/themes/dark.css";
-import "./styles/responsive.css";
 import "./styles/components/RouletteHistory.css";
 import "./styles/components/LanguageSwitcher.css";
+import "./styles/components/ModeSwitcher.css";
+import "./styles/components/GroupControls.css";
+import "./styles/components/GroupResult.css";
+// テーマ・レスポンシブは全コンポーネントCSSの後に読み込む
+import "./styles/themes/dark.css";
+import "./styles/responsive.css";
 
 function App() {
   const { t } = useTranslation();
+  const [mode, setMode] = useState<AppMode>("roulette");
   const canvasRef = useRef<RouletteCanvasRef>(null);
   const {
     optionsText,
@@ -47,62 +57,134 @@ function App() {
       quickMode,
     });
   const { isVisible, message, showSnackbar, hideSnackbar } = useSnackbar();
+  const {
+    groupCount,
+    setGroupCount,
+    groupingMethod,
+    setGroupingMethod,
+    groups,
+    isDividing,
+    animationStep,
+    animationItems,
+    totalAnimationSteps,
+    divide,
+    reset: resetGroups,
+  } = useGroupDivision({ options, quickMode });
 
   const handleShuffle = useCallback(() => {
     shuffleOptions();
   }, [shuffleOptions]);
 
+  const handleModeChange = useCallback(
+    (newMode: AppMode) => {
+      setMode(newMode);
+      resetGroups();
+    },
+    [resetGroups],
+  );
+
+  const isBusy = isSpinning || isDividing;
+
   return (
     <div className="container">
       <LanguageSwitcher />
-      <RouletteHistory history={history} onClear={clearHistory} />
+      {mode === "roulette" && (
+        <RouletteHistory history={history} onClear={clearHistory} />
+      )}
       <h1 className="main-title">🎯 Lucky Roulette</h1>
+
+      <ModeSwitcher mode={mode} onChange={handleModeChange} disabled={isBusy} />
 
       <RouletteInput
         optionsText={optionsText}
         onChange={handleOptionsChange}
         onShuffle={handleShuffle}
-        canShuffle={options.length > 1 && !isSpinning}
-        disabled={isSpinning}
+        canShuffle={options.length > 1 && !isBusy}
+        disabled={isBusy}
         shuffleCount={shuffleCount}
         onShuffleCountChange={handleShuffleCountChange}
       />
 
-      <div className="roulette-section">
-        <div className="canvas-container">
-          <RouletteCanvas
-            ref={canvasRef}
-            options={displayOptions}
-            rotation={rotation}
-          />
-          <RouletteActions
-            canvasElement={canvasRef.current?.getCanvas() || null}
-            currentOption={currentOption}
-            isVisible={!!currentOption && !isSpinning}
-            onSuccess={showSnackbar}
-          />
-        </div>
-        <RouletteResult isSpinning={isSpinning} currentOption={currentOption} />
-        <div className="spin-controls">
-          <button
-            onClick={spin}
-            disabled={!hasOptions || isSpinning}
-            className="spin-button"
-          >
-            {t("app.spin")}
-          </button>
-          <label className="quick-mode-label">
-            <input
-              type="checkbox"
-              checked={quickMode}
-              onChange={handleQuickModeChange}
-              disabled={isSpinning}
-              className="quick-mode-checkbox"
+      {mode === "roulette" && (
+        <div className="roulette-section">
+          <div className="canvas-container">
+            <RouletteCanvas
+              ref={canvasRef}
+              options={displayOptions}
+              rotation={rotation}
             />
-            {t("app.quickMode")}
-          </label>
+            <RouletteActions
+              canvasElement={canvasRef.current?.getCanvas() || null}
+              currentOption={currentOption}
+              isVisible={!!currentOption && !isSpinning}
+              onSuccess={showSnackbar}
+            />
+          </div>
+          <RouletteResult isSpinning={isSpinning} currentOption={currentOption} />
+          <div className="spin-controls">
+            <button
+              onClick={spin}
+              disabled={!hasOptions || isSpinning}
+              className="spin-button"
+            >
+              {t("app.spin")}
+            </button>
+            <label className="quick-mode-label">
+              <input
+                type="checkbox"
+                checked={quickMode}
+                onChange={handleQuickModeChange}
+                disabled={isSpinning}
+                className="quick-mode-checkbox"
+              />
+              {t("app.quickMode")}
+            </label>
+          </div>
         </div>
-      </div>
+      )}
+
+      {mode === "grouping" && (
+        <div className="grouping-section">
+          <GroupControls
+            groupCount={groupCount}
+            onGroupCountChange={setGroupCount}
+            groupingMethod={groupingMethod}
+            onGroupingMethodChange={setGroupingMethod}
+            maxGroups={Math.max(2, options.length)}
+            disabled={isDividing}
+          />
+
+          <div className="spin-controls">
+            <button
+              onClick={divide}
+              disabled={options.length < 2 || isDividing || groupCount > options.length}
+              className="divide-button"
+            >
+              {t("grouping.divide")}
+            </button>
+            <label className="quick-mode-label">
+              <input
+                type="checkbox"
+                checked={quickMode}
+                onChange={handleQuickModeChange}
+                disabled={isDividing}
+                className="quick-mode-checkbox"
+              />
+              {t("app.quickMode")}
+            </label>
+          </div>
+
+          {isDividing && (
+            <GroupAnimation
+              items={animationItems}
+              step={animationStep}
+              totalSteps={totalAnimationSteps}
+            />
+          )}
+
+          {groups && !isDividing && <GroupResultDisplay groups={groups} />}
+        </div>
+      )}
 
       <Footer />
       <Snackbar

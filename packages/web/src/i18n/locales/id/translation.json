@@ -25,6 +25,24 @@
     "copyTitle": "Salin gambar hasil ke clipboard",
     "downloadTitle": "Unduh gambar hasil"
   },
+  "mode": {
+    "roulette": "Roulette",
+    "grouping": "Pembagian Grup"
+  },
+  "grouping": {
+    "groupCount": "Jumlah grup:",
+    "theme": "Tema:",
+    "themes": {
+      "random": "Sederhana",
+      "zodiac": "Zodiak",
+      "element": "Elemen",
+      "color": "Tim Warna"
+    },
+    "divide": "Bagi ke Grup",
+    "dividing": "Membagi...",
+    "resultTitle": "Hasil Pembagian Grup",
+    "members": "{{count}} anggota"
+  },
   "history": {
     "toggle": "Riwayat",
     "title": "Riwayat Kemenangan",

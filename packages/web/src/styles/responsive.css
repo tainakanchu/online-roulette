@@ -63,4 +63,24 @@
     font-size: 12px;
     margin-top: 4px;
   }
+
+  /* Group Controls */
+  .group-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .group-result-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .divide-button {
+    font-size: 16px;
+    padding: 10px;
+  }
+
+  .mode-switcher-tab {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
 } 
