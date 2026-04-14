@@ -25,6 +25,24 @@
     "copyTitle": "結果画像をクリップボードにコピー",
     "downloadTitle": "結果画像をダウンロード"
   },
+  "mode": {
+    "roulette": "ルーレット",
+    "grouping": "グループ分け"
+  },
+  "grouping": {
+    "groupCount": "グループ数:",
+    "theme": "テーマ:",
+    "themes": {
+      "random": "シンプル",
+      "zodiac": "星座",
+      "element": "属性",
+      "color": "カラーチーム"
+    },
+    "divide": "グループ分けする",
+    "dividing": "グループ分け中...",
+    "resultTitle": "グループ分け結果",
+    "members": "{{count}}人"
+  },
   "history": {
     "toggle": "履歴",
     "title": "当選履歴",

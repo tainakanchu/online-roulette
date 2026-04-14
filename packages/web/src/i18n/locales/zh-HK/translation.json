@@ -25,6 +25,24 @@
     "copyTitle": "複製結果圖片到剪貼簿",
     "downloadTitle": "下載結果圖片"
   },
+  "mode": {
+    "roulette": "輪盤",
+    "grouping": "分組"
+  },
+  "grouping": {
+    "groupCount": "組數:",
+    "theme": "主題:",
+    "themes": {
+      "random": "簡單",
+      "zodiac": "星座",
+      "element": "屬性",
+      "color": "顏色隊伍"
+    },
+    "divide": "開始分組",
+    "dividing": "分組中...",
+    "resultTitle": "分組結果",
+    "members": "{{count}}人"
+  },
   "history": {
     "toggle": "歷史",
     "title": "中獎歷史",

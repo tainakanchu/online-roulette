@@ -1,0 +1,162 @@
+.group-result {
+  margin-top: 1.5rem;
+  animation: fadeIn 0.4s ease;
+}
+
+.group-result-title {
+  font-size: 1.2rem;
+  color: #2c3e50;
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.group-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.group-card {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: slideUp 0.3s ease backwards;
+}
+
+.group-card:nth-child(1) { animation-delay: 0.05s; }
+.group-card:nth-child(2) { animation-delay: 0.1s; }
+.group-card:nth-child(3) { animation-delay: 0.15s; }
+.group-card:nth-child(4) { animation-delay: 0.2s; }
+.group-card:nth-child(5) { animation-delay: 0.25s; }
+.group-card:nth-child(6) { animation-delay: 0.3s; }
+
+.group-card-header {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-card-label {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.group-card-count {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.group-card-members {
+  list-style: none;
+  margin: 0;
+  padding: 8px 14px;
+  background: white;
+}
+
+.group-card-member {
+  padding: 5px 0;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.group-card-member:last-child {
+  border-bottom: none;
+}
+
+/* Animation */
+.group-animation {
+  margin-top: 1.5rem;
+}
+
+.group-animation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.group-animation-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  white-space: nowrap;
+}
+
+.group-animation-progress {
+  flex: 1;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.group-animation-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #2196f3);
+  border-radius: 3px;
+  transition: width 0.1s ease;
+}
+
+.group-animation-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.group-animation-item {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: transform 0.05s ease;
+  animation: itemBounce 0.15s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes itemBounce {
+  0% { transform: scale(0.9); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Divide button */
+.divide-button {
+  width: 100%;
+  padding: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #9370DB, #4169E1);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 0.5rem;
+}
+
+.divide-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(65, 105, 225, 0.4);
+}
+
+.divide-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.divide-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
