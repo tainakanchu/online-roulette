@@ -4,6 +4,7 @@ import { readLocalStorage, writeLocalStorage } from "../utils/localStorage";
 import { useBattleMode } from "../hooks/useBattleMode";
 import { BattleBars } from "./BattleBars";
 import { BattleControls } from "./BattleControls";
+import { BattleActions } from "./BattleActions";
 
 const DRAW_COUNT_STORAGE_KEY = "roulette-battle-draw-count";
 const DEFAULT_DRAW_COUNT = 1000;
@@ -11,9 +12,10 @@ const DEFAULT_DRAW_COUNT = 1000;
 interface BattleModeProps {
   options: string[];
   onFinish?: (winner: string) => void;
+  onSuccess?: (message: string) => void;
 }
 
-export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
+export const BattleMode: FC<BattleModeProps> = ({ options, onFinish, onSuccess }) => {
   const { t } = useTranslation();
 
   const [drawCount, setDrawCount] = useState(() => {
@@ -79,6 +81,14 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
 
       {result && (
         <div className="battle-winner">
+          {onSuccess && (
+            <BattleActions
+              options={options}
+              counts={result.counts}
+              winner={result.winner}
+              onSuccess={onSuccess}
+            />
+          )}
           <div className="battle-winner-label">{t("battle.winner")}</div>
           <div className="battle-winner-value">{result.winner}</div>
         </div>

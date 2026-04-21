@@ -17,6 +17,7 @@ import { ModeSwitcher, type AppMode } from "./components/ModeSwitcher";
 import { GroupControls } from "./components/GroupControls";
 import { GroupAnimation } from "./components/GroupAnimation";
 import { GroupResultDisplay } from "./components/GroupResultDisplay";
+import { GroupActions } from "./components/GroupActions";
 import { useGroupDivision } from "./hooks/useGroupDivision";
 import { readLocalStorage, writeLocalStorage } from "./utils/localStorage";
 
@@ -38,11 +39,24 @@ import "./styles/themes/dark.css";
 import "./styles/responsive.css";
 
 const MODE_STORAGE_KEY = "roulette-mode";
+const MODE_QUERY_KEY = "mode";
+
+const isAppMode = (value: string | null): value is AppMode =>
+  value === "roulette" || value === "grouping" || value === "battle";
 
 const readInitialMode = (): AppMode => {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get(MODE_QUERY_KEY);
+  if (isAppMode(fromQuery)) return fromQuery;
   const stored = readLocalStorage(MODE_STORAGE_KEY);
-  if (stored === "grouping" || stored === "battle") return stored;
+  if (isAppMode(stored)) return stored;
   return "roulette";
+};
+
+const writeModeToURL = (mode: AppMode) => {
+  const url = new URL(window.location.href);
+  url.searchParams.set(MODE_QUERY_KEY, mode);
+  window.history.replaceState({}, "", url.toString());
 };
 
 function App() {
@@ -52,6 +66,7 @@ function App() {
 
   useEffect(() => {
     writeLocalStorage(MODE_STORAGE_KEY, mode);
+    writeModeToURL(mode);
   }, [mode]);
 
   const {
@@ -198,12 +213,21 @@ function App() {
             />
           )}
 
-          {groups && !isDividing && <GroupResultDisplay groups={groups} />}
+          {groups && !isDividing && (
+            <GroupResultDisplay
+              groups={groups}
+              actions={<GroupActions groups={groups} onSuccess={showSnackbar} />}
+            />
+          )}
         </div>
       )}
 
       {mode === "battle" && (
-        <BattleMode options={options} onFinish={addHistoryEntry} />
+        <BattleMode
+          options={options}
+          onFinish={addHistoryEntry}
+          onSuccess={showSnackbar}
+        />
       )}
 
       <Footer />

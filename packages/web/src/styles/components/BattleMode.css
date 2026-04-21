@@ -157,6 +157,7 @@
 }
 
 .battle-winner {
+  position: relative;
   margin-top: 20px;
   padding: 16px;
   background: linear-gradient(135deg, #fff8e1, #ffe0b2);
@@ -164,6 +165,14 @@
   text-align: center;
   box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
   animation: fadeIn 0.4s ease-out;
+}
+
+.result-actions-inline {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
 }
 
 .battle-winner-label {
