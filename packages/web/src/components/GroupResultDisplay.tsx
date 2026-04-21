@@ -1,16 +1,18 @@
-import { type FC } from "react";
+import { type FC, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { getColorBrightness, type GroupResult } from "@tainakanchu/roulette-core";
 
 interface GroupResultDisplayProps {
   groups: GroupResult[];
+  actions?: ReactNode;
 }
 
-export const GroupResultDisplay: FC<GroupResultDisplayProps> = ({ groups }) => {
+export const GroupResultDisplay: FC<GroupResultDisplayProps> = ({ groups, actions }) => {
   const { t } = useTranslation();
 
   return (
     <div className="group-result">
+      {actions}
       <h3 className="group-result-title">{t("grouping.resultTitle")}</h3>
       <div className="group-result-grid">
         {groups.map((group, index) => {

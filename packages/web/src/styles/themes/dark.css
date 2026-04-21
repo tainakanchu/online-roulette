@@ -154,4 +154,65 @@
   .group-animation-progress {
     background: #333;
   }
-} 
+
+  /* Battle Mode */
+  .battle-controls {
+    background-color: #222;
+  }
+
+  .battle-draw-count-label {
+    color: #dcdcdc;
+  }
+
+  .battle-draw-count-input {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #ffffff;
+    color-scheme: dark;
+  }
+
+  .battle-draw-count-input:disabled {
+    background-color: #1a1a1a;
+    color: #666;
+  }
+
+  .battle-progress {
+    color: #aaa;
+  }
+
+  .battle-bar-label {
+    color: #dcdcdc;
+  }
+
+  .battle-bar-row.is-winner .battle-bar-label {
+    color: #ff8a80;
+  }
+
+  .battle-bar-track {
+    background-color: #2a2a2a;
+  }
+
+  .battle-bar-count {
+    color: #f5f5f5;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  }
+
+  .battle-empty {
+    background-color: #222;
+    color: #aaa;
+  }
+
+  .battle-winner {
+    background: linear-gradient(135deg, #3a2a10 0%, #4a2f14 100%);
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.25);
+  }
+
+  .battle-winner-label {
+    color: #ffb74d;
+  }
+
+  .battle-winner-value {
+    color: #ffcc80;
+  }
+}
+
