@@ -27,7 +27,8 @@
   },
   "mode": {
     "roulette": "ルーレット",
-    "grouping": "グループ分け"
+    "grouping": "グループ分け",
+    "battle": "バトル"
   },
   "grouping": {
     "groupCount": "グループ数:",
@@ -42,6 +43,15 @@
     "dividing": "グループ分け中...",
     "resultTitle": "グループ分け結果",
     "members": "{{count}}人"
+  },
+  "battle": {
+    "drawCount": "抽選回数:",
+    "start": "スタート",
+    "reset": "リセット",
+    "progress": "{{current}} / {{total}}",
+    "winner": "🏆 勝者",
+    "empty": "選択肢を入力してください",
+    "suddenDeath": "サドンデス！差が出るまで再抽選中… (+{{count}})"
   },
   "history": {
     "toggle": "履歴",

@@ -1,9 +1,10 @@
-import { useState, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RouletteCanvas, RouletteCanvasRef } from "./components/RouletteCanvas";
 import { RouletteResult } from "./components/RouletteResult";
 import { RouletteInput } from "./components/RouletteInput";
 import { RouletteActions } from "./components/RouletteActions";
+import { BattleMode } from "./components/BattleMode";
 import { useRouletteOptions } from "./hooks/useRouletteOptions";
 import { useRouletteAnimation } from "./hooks/useRouletteAnimation";
 import { useSnackbar } from "./hooks/useSnackbar";
@@ -17,6 +18,7 @@ import { GroupControls } from "./components/GroupControls";
 import { GroupAnimation } from "./components/GroupAnimation";
 import { GroupResultDisplay } from "./components/GroupResultDisplay";
 import { useGroupDivision } from "./hooks/useGroupDivision";
+import { readLocalStorage, writeLocalStorage } from "./utils/localStorage";
 
 // スタイルのインポート
 import "./styles/base.css";
@@ -30,14 +32,28 @@ import "./styles/components/LanguageSwitcher.css";
 import "./styles/components/ModeSwitcher.css";
 import "./styles/components/GroupControls.css";
 import "./styles/components/GroupResult.css";
+import "./styles/components/BattleMode.css";
 // テーマ・レスポンシブは全コンポーネントCSSの後に読み込む
 import "./styles/themes/dark.css";
 import "./styles/responsive.css";
 
+const MODE_STORAGE_KEY = "roulette-mode";
+
+const readInitialMode = (): AppMode => {
+  const stored = readLocalStorage(MODE_STORAGE_KEY);
+  if (stored === "grouping" || stored === "battle") return stored;
+  return "roulette";
+};
+
 function App() {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<AppMode>("roulette");
+  const [mode, setMode] = useState<AppMode>(readInitialMode);
   const canvasRef = useRef<RouletteCanvasRef>(null);
+
+  useEffect(() => {
+    writeLocalStorage(MODE_STORAGE_KEY, mode);
+  }, [mode]);
+
   const {
     optionsText,
     options,
@@ -184,6 +200,10 @@ function App() {
 
           {groups && !isDividing && <GroupResultDisplay groups={groups} />}
         </div>
+      )}
+
+      {mode === "battle" && (
+        <BattleMode options={options} onFinish={addHistoryEntry} />
       )}
 
       <Footer />

@@ -27,7 +27,8 @@
   },
   "mode": {
     "roulette": "Roulette",
-    "grouping": "Pembagian Grup"
+    "grouping": "Pembagian Grup",
+    "battle": "Pertarungan"
   },
   "grouping": {
     "groupCount": "Jumlah grup:",
@@ -42,6 +43,15 @@
     "dividing": "Membagi...",
     "resultTitle": "Hasil Pembagian Grup",
     "members": "{{count}} anggota"
+  },
+  "battle": {
+    "drawCount": "Jumlah undian:",
+    "start": "Mulai",
+    "reset": "Atur ulang",
+    "progress": "{{current}} / {{total}}",
+    "winner": "🏆 Pemenang",
+    "empty": "Masukkan pilihan Anda",
+    "suddenDeath": "Sudden death! Mengundi ulang hingga ada pemenang (+{{count}})"
   },
   "history": {
     "toggle": "Riwayat",

@@ -27,7 +27,8 @@
   },
   "mode": {
     "roulette": "Roulette",
-    "grouping": "Group Division"
+    "grouping": "Group Division",
+    "battle": "Battle"
   },
   "grouping": {
     "groupCount": "Groups:",
@@ -42,6 +43,15 @@
     "dividing": "Dividing...",
     "resultTitle": "Group Division Result",
     "members": "{{count}} members"
+  },
+  "battle": {
+    "drawCount": "Draws:",
+    "start": "Start",
+    "reset": "Reset",
+    "progress": "{{current}} / {{total}}",
+    "winner": "🏆 Winner",
+    "empty": "Please enter your options",
+    "suddenDeath": "Sudden death! Redrawing until someone pulls ahead (+{{count}})"
   },
   "history": {
     "toggle": "History",
