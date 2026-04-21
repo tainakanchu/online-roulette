@@ -5,3 +5,4 @@ export { COLORS, getColorBrightness } from "./colors";
 export type { RouletteHistoryEntry, RouletteHistory } from "./types";
 export { divideIntoGroups, GROUPING_METHODS, isValidGroupingMethod } from "./grouping";
 export type { GroupResult, GroupingMethod } from "./grouping";
+export { drawBattleSequence, tallyBattle } from "./battle";

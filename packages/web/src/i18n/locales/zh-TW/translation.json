@@ -27,7 +27,8 @@
   },
   "mode": {
     "roulette": "輪盤",
-    "grouping": "分組"
+    "grouping": "分組",
+    "battle": "對戰"
   },
   "grouping": {
     "groupCount": "組數:",
@@ -42,6 +43,15 @@
     "dividing": "分組中...",
     "resultTitle": "分組結果",
     "members": "{{count}}人"
+  },
+  "battle": {
+    "drawCount": "抽籤次數:",
+    "start": "開始",
+    "reset": "重置",
+    "progress": "{{current}} / {{total}}",
+    "winner": "🏆 勝者",
+    "empty": "請輸入選項",
+    "suddenDeath": "驟死賽！重新抽籤直到分出勝負 (+{{count}})"
   },
   "history": {
     "toggle": "歷史",
