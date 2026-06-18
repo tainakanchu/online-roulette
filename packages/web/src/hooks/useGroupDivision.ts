@@ -10,11 +10,14 @@ import { useShakeSound } from "./useShakeSound";
 interface UseGroupDivisionProps {
   options: string[];
   quickMode?: boolean;
+  /** グループ分けアニメーション完了時に呼ばれる（勝利演出用） */
+  onComplete?: () => void;
 }
 
 export const useGroupDivision = ({
   options,
   quickMode = false,
+  onComplete,
 }: UseGroupDivisionProps) => {
   const [groupCount, setGroupCount] = useState(2);
   const [groupingMethod, setGroupingMethod] = useState<GroupingMethod>("random");
@@ -58,11 +61,20 @@ export const useGroupDivision = ({
         shakeSound.stop();
         setIsDividing(false);
         setGroups(finalGroups);
+        onComplete?.();
       }
     };
 
     animationRef.current = setTimeout(animate, 50);
-  }, [options, groupCount, groupingMethod, quickMode, shakeSound, totalAnimationSteps]);
+  }, [
+    options,
+    groupCount,
+    groupingMethod,
+    quickMode,
+    shakeSound,
+    totalAnimationSteps,
+    onComplete,
+  ]);
 
   const reset = useCallback(() => {
     if (animationRef.current) {

@@ -1,4 +1,11 @@
-import { useState, useCallback, useMemo, useEffect, type ChangeEvent } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
 import { readLocalStorage, writeLocalStorage } from "../utils/localStorage";
 import { useShakeSound } from "./useShakeSound";
 
@@ -7,13 +14,28 @@ import { shuffleArray } from "@tainakanchu/roulette-core";
 const SHUFFLE_COUNT_STORAGE_KEY = "roulette-shuffle-count";
 const QUICK_MODE_STORAGE_KEY = "roulette-quick-mode";
 
-export const useRouletteOptions = () => {
+const toOptions = (text: string): string[] =>
+  text
+    .split("\n")
+    .map((option) => option.trim())
+    .filter((option) => option.length > 0);
+
+interface UseRouletteOptionsProps {
+  /** 選択肢の集合が変化したとき（追加・削除・全消去・一括編集）に呼ばれる */
+  onOptionsMutated?: () => void;
+}
+
+export const useRouletteOptions = ({
+  onOptionsMutated,
+}: UseRouletteOptionsProps = {}) => {
   const shakeSound = useShakeSound();
   const [optionsText, setOptionsText] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const queryOptions = params.get("options");
     return queryOptions ? queryOptions.split(",").join("\n") : "";
   });
+  const [newOption, setNewOption] = useState("");
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
 
   const [shuffleCount, setShuffleCount] = useState(() => {
     const storedValue = readLocalStorage(SHUFFLE_COUNT_STORAGE_KEY);
@@ -37,22 +59,13 @@ export const useRouletteOptions = () => {
     writeLocalStorage(QUICK_MODE_STORAGE_KEY, quickMode.toString());
   }, [quickMode]);
 
-  const options = useMemo(() => {
-    return optionsText
-      .split("\n")
-      .map((option) => option.trim())
-      .filter((option) => option.length > 0);
-  }, [optionsText]);
+  const options = useMemo(() => toOptions(optionsText), [optionsText]);
 
   const hasOptions = options.length > 0;
 
   // URLを更新する関数
   const updateURL = useCallback((text: string) => {
-    const options = text
-      .split("\n")
-      .map((option) => option.trim())
-      .filter((option) => option.length > 0)
-      .join(",");
+    const options = toOptions(text).join(",");
 
     const url = new URL(window.location.href);
     if (options) {
@@ -63,15 +76,71 @@ export const useRouletteOptions = () => {
     window.history.replaceState({}, "", url.toString());
   }, []);
 
-  // テキストエリアの変更時にURLも更新
+  // optionsText と URL をまとめて更新し、結果のリセットを通知する
+  const commitText = useCallback(
+    (text: string) => {
+      setOptionsText(text);
+      updateURL(text);
+      onOptionsMutated?.();
+    },
+    [updateURL, onOptionsMutated],
+  );
+
+  // 一括編集用テキストエリアの変更
   const handleOptionsChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
-      const newText = e.target.value;
-      setOptionsText(newText);
-      updateURL(newText);
+      commitText(e.target.value);
     },
-    [updateURL]
+    [commitText],
   );
+
+  const handleNewOptionChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      setNewOption(e.target.value);
+    },
+    [],
+  );
+
+  // 選択肢を追加（カンマ・改行で複数同時追加に対応）
+  const addOption = useCallback(() => {
+    const raw = newOption.trim();
+    if (!raw) return;
+    const additions = raw
+      .split(/[,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!additions.length) return;
+    const current = toOptions(optionsText);
+    commitText(current.concat(additions).join("\n"));
+    setNewOption("");
+  }, [newOption, optionsText, commitText]);
+
+  const handleNewOptionKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addOption();
+      }
+    },
+    [addOption],
+  );
+
+  const removeOption = useCallback(
+    (index: number) => {
+      const current = toOptions(optionsText);
+      current.splice(index, 1);
+      commitText(current.join("\n"));
+    },
+    [optionsText, commitText],
+  );
+
+  const clearOptions = useCallback(() => {
+    commitText("");
+  }, [commitText]);
+
+  const toggleBulkEdit = useCallback(() => {
+    setShowBulkEdit((prev) => !prev);
+  }, []);
 
   const handleShuffleCountChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -80,21 +149,18 @@ export const useRouletteOptions = () => {
         setShuffleCount(value);
       }
     },
-    []
+    [],
   );
 
   const handleQuickModeChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       setQuickMode(e.target.checked);
     },
-    []
+    [],
   );
 
   const shuffleOptions = useCallback(() => {
-    const optionsToShuffle = optionsText
-      .split("\n")
-      .map((option) => option.trim())
-      .filter((option) => option.length > 0);
+    const optionsToShuffle = toOptions(optionsText);
 
     if (optionsToShuffle.length <= 1) {
       return;
@@ -108,10 +174,7 @@ export const useRouletteOptions = () => {
       count += 1;
 
       setOptionsText((currentText) => {
-        const currentOptions = currentText
-          .split("\n")
-          .map((option) => option.trim())
-          .filter((option) => option.length > 0);
+        const currentOptions = toOptions(currentText);
 
         const shuffled = shuffleArray(currentOptions);
         const nextText = shuffled.join("\n");
@@ -132,7 +195,15 @@ export const useRouletteOptions = () => {
     optionsText,
     options,
     hasOptions,
+    newOption,
+    showBulkEdit,
     handleOptionsChange,
+    handleNewOptionChange,
+    handleNewOptionKeyDown,
+    addOption,
+    removeOption,
+    clearOptions,
+    toggleBulkEdit,
     shuffleOptions,
     shuffleCount,
     handleShuffleCountChange,

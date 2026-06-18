@@ -5,7 +5,7 @@
     "quickMode": "Mode Cepat"
   },
   "input": {
-    "title": "Masukkan pilihan Anda",
+    "title": "Pilihan Anda",
     "placeholder": "Masukkan pilihan yang dipisahkan dengan baris baru",
     "shuffleCount": "Jumlah acak:",
     "shuffle": "Acak",
@@ -14,8 +14,8 @@
   },
   "result": {
     "selecting": "Memilih...",
-    "label": "Hasil",
-    "default": "Hasil akan muncul di sini"
+    "label": "Pemenang",
+    "default": "Putar rodanya!"
   },
   "actions": {
     "copySuccess": "Gambar hasil disalin ke clipboard!",
@@ -27,7 +27,7 @@
   },
   "mode": {
     "roulette": "Roulette",
-    "grouping": "Pembagian Grup",
+    "grouping": "Grup",
     "battle": "Pertarungan"
   },
   "grouping": {
@@ -61,5 +61,14 @@
     "clearAll": "Hapus semua",
     "clearConfirm": "Hapus semua riwayat?",
     "showHistory": "Tampilkan riwayat"
+  },
+  "ui": {
+    "tagline": "Putar untuk menentukan nasib",
+    "empty": "Tambah pilihan untuk mulai",
+    "add": "Tambah pilihan...",
+    "bulk": "Edit massal",
+    "clear": "Hapus",
+    "leading": "Memimpin",
+    "go": "GO!"
   }
 }

@@ -19,9 +19,7 @@ export const GroupAnimation: FC<GroupAnimationProps> = ({
   return (
     <div className="group-animation">
       <div className="group-animation-header">
-        <span className="group-animation-label">
-          {t("grouping.dividing")}
-        </span>
+        <span className="group-animation-label">{t("grouping.dividing")}</span>
         <div className="group-animation-progress">
           <div
             className="group-animation-progress-bar"
@@ -33,7 +31,7 @@ export const GroupAnimation: FC<GroupAnimationProps> = ({
         {items.map((item, i) => {
           const color = COLORS[i % COLORS.length];
           const textColor =
-            getColorBrightness(color) > 128 ? "#000000" : "#FFFFFF";
+            getColorBrightness(color) > 128 ? "#1a1330" : "#ffffff";
           return (
             <span
               key={i}

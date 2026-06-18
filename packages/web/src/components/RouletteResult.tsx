@@ -12,18 +12,18 @@ export const RouletteResult: React.FC<RouletteResultProps> = ({
   const { t } = useTranslation();
 
   return (
-    <div
-      className={`result ${isSpinning ? "spinning" : ""} ${
-        currentOption ? "has-result" : ""
-      }`}
-    >
+    <div className={`result ${isSpinning ? "spinning" : ""}`}>
+      <div
+        className="result-bar"
+        style={{ transform: currentOption ? "scaleX(1)" : "scaleX(0)" }}
+      />
       <div className="result-content">
         {isSpinning ? (
           <div className="loading-text">{t("result.selecting")}</div>
         ) : currentOption ? (
           <>
             <div className="result-label">{t("result.label")}</div>
-            <div className="result-value">{currentOption}</div>
+            <div className="result-value">🎉 {currentOption}</div>
           </>
         ) : (
           <div className="default-text">{t("result.default")}</div>

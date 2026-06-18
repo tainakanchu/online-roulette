@@ -1,7 +1,7 @@
 .group-controls {
   display: flex;
   gap: 16px;
-  margin-top: 12px;
+  margin-top: 4px;
   flex-wrap: wrap;
 }
 
@@ -14,47 +14,73 @@
 .group-control-label {
   font-size: 14px;
   font-weight: 500;
-  color: #555;
+  color: rgba(255, 255, 255, 0.75);
   white-space: nowrap;
 }
 
 .group-count-input {
   width: 64px;
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 7px 8px;
   font-size: 14px;
+  font-family: inherit;
   text-align: center;
-}
-
-.group-count-input:focus {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
   outline: none;
-  border-color: #4CAF50;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-}
-
-.group-count-input:disabled {
-  background: #f5f5f5;
-  color: #999;
 }
 
 .group-theme-select {
-  padding: 6px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 7px 12px;
   font-size: 14px;
-  background: white;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(30, 16, 60, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
   cursor: pointer;
+  color-scheme: dark;
 }
 
-.group-theme-select:focus {
-  outline: none;
-  border-color: #4CAF50;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+.group-theme-select option {
+  background: #1d0f3d;
+  color: #fff;
 }
 
+.group-count-input:disabled,
 .group-theme-select:disabled {
-  background: #f5f5f5;
-  color: #999;
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Divide button */
+.divide-button {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #fff;
+  background: linear-gradient(135deg, #9370db, #4169e1);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.divide-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.07);
+}
+
+.divide-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.grouping-section .quick-mode-label {
+  justify-content: center;
+  margin-top: 14px;
 }

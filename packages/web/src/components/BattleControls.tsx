@@ -6,7 +6,7 @@ interface BattleControlsProps {
   onDrawCountChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onStart: () => void;
   onReset: () => void;
-  isRunning: boolean;
+  locked: boolean;
   canStart: boolean;
   processedCount: number;
   hasResult: boolean;
@@ -17,7 +17,7 @@ export const BattleControls: FC<BattleControlsProps> = ({
   onDrawCountChange,
   onStart,
   onReset,
-  isRunning,
+  locked,
   canStart,
   processedCount,
   hasResult,
@@ -38,7 +38,7 @@ export const BattleControls: FC<BattleControlsProps> = ({
           step="1"
           value={drawCount}
           onChange={onDrawCountChange}
-          disabled={isRunning}
+          disabled={locked}
           className="battle-draw-count-input"
         />
       </div>
@@ -46,15 +46,15 @@ export const BattleControls: FC<BattleControlsProps> = ({
         <button
           type="button"
           onClick={onStart}
-          disabled={!canStart || isRunning}
+          disabled={!canStart || locked}
           className="battle-start-button"
         >
-          {t("battle.start")}
+          ⚔️ {t("battle.start")}
         </button>
         <button
           type="button"
           onClick={onReset}
-          disabled={isRunning || (!hasResult && processedCount === 0)}
+          disabled={locked || (!hasResult && processedCount === 0)}
           className="battle-reset-button"
         >
           {t("battle.reset")}

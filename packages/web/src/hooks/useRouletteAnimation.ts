@@ -97,6 +97,11 @@ export const useRouletteAnimation = ({
     };
   }, [options, isSpinning, rotation, rouletteLogic, playTickSound, onFinish, quickMode]);
 
+  // 選択肢が編集されたときなどに当選結果をクリアする
+  const resetResult = useCallback(() => {
+    setCurrentOption("");
+  }, []);
+
   useEffect(() => {
     if (isSpinning) {
       return;
@@ -114,6 +119,7 @@ export const useRouletteAnimation = ({
     isSpinning,
     rotation,
     spin,
+    resetResult,
     displayOptions,
   };
 };

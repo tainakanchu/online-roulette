@@ -5,17 +5,17 @@
     "quickMode": "時短モード"
   },
   "input": {
-    "title": "選択肢を入力してください",
+    "title": "選択肢",
     "placeholder": "選択肢を改行で区切って入力してください",
-    "shuffleCount": "シャッフル回数:",
+    "shuffleCount": "シャッフル x",
     "shuffle": "シャッフル",
     "helpText": "※ URLのoptionsクエリパラメータでカンマ区切りの選択肢を指定することもできます",
     "helpExample": "例: ?options=選択肢1,選択肢2,選択肢3"
   },
   "result": {
     "selecting": "選択中...",
-    "label": "結果",
-    "default": "結果がここに表示されます"
+    "label": "当選",
+    "default": "ホイールを回そう！"
   },
   "actions": {
     "copySuccess": "結果画像をクリップボードにコピーしました!",
@@ -27,7 +27,7 @@
   },
   "mode": {
     "roulette": "ルーレット",
-    "grouping": "グループ分け",
+    "grouping": "グループ",
     "battle": "バトル"
   },
   "grouping": {
@@ -61,5 +61,14 @@
     "clearAll": "すべて削除",
     "clearConfirm": "履歴をすべて削除しますか?",
     "showHistory": "履歴を表示"
+  },
+  "ui": {
+    "tagline": "スピンして運命を決めよう",
+    "empty": "選択肢を追加してスタート",
+    "add": "選択肢を追加...",
+    "bulk": "まとめて編集",
+    "clear": "クリア",
+    "leading": "首位",
+    "go": "GO!"
   }
 }

@@ -40,6 +40,8 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
     suddenDeathCount,
     isRunning,
     isSuddenDeath,
+    countdownValue,
+    isCountingDown,
     result,
     start,
     reset,
@@ -50,7 +52,29 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
   });
 
   const canStart = options.length >= 2 && drawCount >= 1;
+  const locked = isRunning || isCountingDown;
   const winner = result?.winner ?? null;
+  const racing = isRunning || isSuddenDeath;
+
+  // 現在の首位（同数の場合は先に登場した方）
+  const anyCount = counts.some((c) => c > 0);
+  let leaderIdx = -1;
+  let leaderMax = -1;
+  counts.forEach((count, i) => {
+    if (count > leaderMax) {
+      leaderMax = count;
+      leaderIdx = i;
+    }
+  });
+  const leaderActive = racing && anyCount && leaderIdx >= 0;
+  const leaderName = leaderIdx >= 0 ? options[leaderIdx] : "";
+
+  const countdownDisplay =
+    countdownValue === 0
+      ? t("ui.go")
+      : countdownValue != null
+        ? String(countdownValue)
+        : "";
 
   return (
     <div className="battle-mode">
@@ -59,11 +83,24 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
         onDrawCountChange={handleDrawCountChange}
         onStart={start}
         onReset={reset}
-        isRunning={isRunning}
+        locked={locked}
         canStart={canStart}
         processedCount={processedCount}
         hasResult={result !== null}
       />
+
+      {isCountingDown && (
+        <div className="battle-countdown">
+          <div className="battle-countdown-flag">🏁</div>
+          <div className="battle-countdown-value">{countdownDisplay}</div>
+        </div>
+      )}
+
+      {leaderActive && (
+        <div className="battle-leader">
+          🔥 {t("ui.leading")}: <span className="battle-leader-name">{leaderName}</span>
+        </div>
+      )}
 
       {isSuddenDeath && (
         <div className="battle-sudden-death">
@@ -74,7 +111,12 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
       {options.length === 0 ? (
         <p className="battle-empty">{t("battle.empty")}</p>
       ) : (
-        <BattleBars options={options} counts={counts} winner={winner} />
+        <BattleBars
+          options={options}
+          counts={counts}
+          winner={winner}
+          racing={racing}
+        />
       )}
 
       {result && (

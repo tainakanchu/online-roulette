@@ -11,13 +11,17 @@ export const GroupResultDisplay: FC<GroupResultDisplayProps> = ({ groups }) => {
 
   return (
     <div className="group-result">
-      <h3 className="group-result-title">{t("grouping.resultTitle")}</h3>
+      <h3 className="group-result-title">🎊 {t("grouping.resultTitle")}</h3>
       <div className="group-result-grid">
         {groups.map((group, index) => {
           const textColor =
-            getColorBrightness(group.color) > 128 ? "#000000" : "#FFFFFF";
+            getColorBrightness(group.color) > 128 ? "#1a1330" : "#ffffff";
           return (
-            <div key={index} className="group-card">
+            <div
+              key={index}
+              className="group-card"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
               <div
                 className="group-card-header"
                 style={{ backgroundColor: group.color, color: textColor }}

@@ -1,16 +1,18 @@
 .battle-mode {
-  margin-top: 16px;
+  margin-top: 4px;
 }
 
+/* ===== Controls bar ===== */
 .battle-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 16px;
   align-items: center;
-  padding: 12px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+  padding: 14px;
   margin-bottom: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
 }
 
 .battle-draw-count {
@@ -21,22 +23,20 @@
 
 .battle-draw-count-label {
   font-size: 14px;
-  color: #333;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .battle-draw-count-input {
   width: 90px;
-  padding: 6px 8px;
+  padding: 7px 8px;
   font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  font-family: inherit;
   text-align: center;
-}
-
-.battle-draw-count-input:disabled {
-  background-color: #f5f5f5;
-  opacity: 0.7;
-  cursor: not-allowed;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  outline: none;
 }
 
 .battle-actions {
@@ -46,48 +46,120 @@
 
 .battle-start-button,
 .battle-reset-button {
-  padding: 8px 18px;
+  padding: 9px 20px;
   font-size: 14px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s, opacity 0.2s;
+  font-weight: 600;
+  font-family: inherit;
   color: #fff;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: filter 0.15s ease;
 }
 
 .battle-start-button {
-  background-color: #4caf50;
+  background: linear-gradient(135deg, #4caf50, #ff3d8a);
 }
 
 .battle-start-button:hover:not(:disabled) {
-  background-color: #388e3c;
+  filter: brightness(1.08);
 }
 
 .battle-reset-button {
-  background-color: #9e9e9e;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .battle-reset-button:hover:not(:disabled) {
-  background-color: #757575;
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .battle-start-button:disabled,
 .battle-reset-button:disabled {
-  background-color: #b0bec5;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.5);
   cursor: not-allowed;
-  opacity: 0.7;
+}
+
+.battle-draw-count-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .battle-progress {
   margin-left: auto;
   font-size: 13px;
-  color: #555;
+  color: rgba(255, 255, 255, 0.6);
   font-variant-numeric: tabular-nums;
 }
 
+/* ===== Countdown overlay ===== */
+.battle-countdown {
+  margin: 14px 0;
+  padding: 20px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+}
+
+.battle-countdown-flag {
+  font-size: 22px;
+  margin-bottom: 2px;
+}
+
+.battle-countdown-value {
+  font-size: 66px;
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(135deg, #ffd23f, #ff8a00);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rkCount 0.72s ease-in-out infinite;
+}
+
+/* ===== Leader banner ===== */
+.battle-leader {
+  margin: 12px 0;
+  padding: 11px 16px;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffd23f;
+  background: linear-gradient(90deg, rgba(255, 210, 63, 0.2), rgba(255, 138, 0, 0.14));
+  border: 1px solid rgba(255, 210, 63, 0.4);
+  border-radius: 12px;
+}
+
+.battle-leader-name {
+  color: #fff;
+}
+
+/* ===== Sudden death banner ===== */
+.battle-sudden-death {
+  margin: 12px 0;
+  padding: 10px 16px;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: linear-gradient(90deg, #ff5252, #ff1744);
+  border-radius: 12px;
+  animation: rkSudden 0.9s ease-in-out infinite alternate;
+}
+
+.battle-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+
+/* ===== Bars ===== */
 .battle-bars {
   position: relative;
-  padding: 0;
   max-height: 480px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -104,36 +176,20 @@
   align-items: center;
   gap: 10px;
   padding: 4px 0;
-  transition:
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 240ms ease;
-  will-change: transform;
-  contain: layout paint;
-}
-
-.battle-bar-row.is-winner {
-  filter: drop-shadow(0 0 8px rgba(255, 152, 0, 0.45));
-  z-index: 1;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .battle-bar-label {
   font-size: 14px;
-  color: #333;
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
-  font-weight: 500;
-}
-
-.battle-bar-row.is-winner .battle-bar-label {
-  color: #c62828;
-  font-weight: 700;
 }
 
 .battle-bar-track {
   position: relative;
   height: 28px;
-  background-color: #eceff1;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -141,6 +197,7 @@
 .battle-bar-fill {
   height: 100%;
   border-radius: 14px;
+  transition: width 0.12s linear;
 }
 
 .battle-bar-count {
@@ -151,63 +208,36 @@
   display: flex;
   align-items: center;
   font-size: 13px;
-  font-weight: 600;
-  color: #263238;
+  font-weight: 700;
+  color: #fff;
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+/* ===== Winner card ===== */
 .battle-winner {
   margin-top: 20px;
-  padding: 16px;
-  background: linear-gradient(135deg, #fff8e1, #ffe0b2);
-  border-radius: 12px;
+  padding: 18px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
-  animation: fadeIn 0.4s ease-out;
+  background: linear-gradient(135deg, rgba(255, 210, 63, 0.22), rgba(255, 138, 0, 0.18));
+  border: 1px solid rgba(255, 210, 63, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(255, 152, 0, 0.18);
+  animation: rkPop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
 .battle-winner-label {
-  font-size: 14px;
-  color: #e65100;
-  letter-spacing: 0.1em;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffd23f;
 }
 
 .battle-winner-value {
-  font-size: 1.8rem;
+  margin-top: 6px;
+  font-size: 2rem;
   font-weight: 700;
-  color: #bf360c;
-  margin-top: 4px;
-  word-break: break-word;
-}
-
-.battle-empty {
-  padding: 24px;
-  text-align: center;
-  color: #888;
-  font-size: 14px;
-  background-color: #fafafa;
-  border-radius: 8px;
-}
-
-.battle-sudden-death {
-  margin: 12px 0;
-  padding: 10px 16px;
-  background: linear-gradient(90deg, #ff5252, #ff1744);
   color: #fff;
-  border-radius: 8px;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: 0.08em;
-  animation: suddenDeathPulse 0.9s ease-in-out infinite alternate;
-}
-
-@keyframes suddenDeathPulse {
-  from {
-    box-shadow: 0 0 0 rgba(255, 23, 68, 0.4);
-    transform: scale(1);
-  }
-  to {
-    box-shadow: 0 0 18px rgba(255, 23, 68, 0.8);
-    transform: scale(1.02);
-  }
+  word-break: break-word;
+  text-shadow: 0 4px 22px rgba(255, 210, 63, 0.5);
 }
