@@ -1,39 +1,43 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  generateRouletteResultImage,
-  copyImageToClipboard,
-  downloadImage,
-} from "../utils/imageUtils";
+import { copyImageToClipboard, downloadImage } from "../utils/imageUtils";
 
 interface RouletteActionsProps {
   canvasElement: HTMLCanvasElement | null;
-  currentOption: string;
   isVisible: boolean;
   onSuccess: (message: string) => void;
 }
 
+const canvasToBlob = (canvas: HTMLCanvasElement): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Failed to generate image blob"));
+    }, "image/png");
+  });
+
+const buildFilename = (): string => {
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `roulette-result-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+    now.getDate()
+  )}-${pad(now.getHours())}${pad(now.getMinutes())}.png`;
+};
+
 export const RouletteActions: React.FC<RouletteActionsProps> = ({
   canvasElement,
-  currentOption,
   isVisible,
   onSuccess,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleCopyToClipboard = async () => {
-    if (!currentOption || !canvasElement) return;
-
+    if (!canvasElement) return;
     setIsGenerating(true);
     try {
-      const imageBlob = await generateRouletteResultImage(
-        canvasElement,
-        currentOption,
-        t("result.label"),
-        i18n.language
-      );
-      await copyImageToClipboard(imageBlob);
+      const blob = await canvasToBlob(canvasElement);
+      await copyImageToClipboard(blob);
       onSuccess(t("actions.copySuccess"));
     } catch (error) {
       console.error("Error copying to clipboard:", error);
@@ -44,26 +48,11 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
   };
 
   const handleDownload = async () => {
-    if (!currentOption || !canvasElement) return;
-
+    if (!canvasElement) return;
     setIsGenerating(true);
     try {
-      const imageBlob = await generateRouletteResultImage(
-        canvasElement,
-        currentOption,
-        t("result.label"),
-        i18n.language
-      );
-      const now = new Date();
-      const filename = `roulette-result-${now.getFullYear()}${(
-        now.getMonth() + 1
-      )
-        .toString()
-        .padStart(2, "0")}${now.getDate().toString().padStart(2, "0")}-${now
-        .getHours()
-        .toString()
-        .padStart(2, "0")}${now.getMinutes().toString().padStart(2, "0")}.png`;
-      downloadImage(imageBlob, filename);
+      const blob = await canvasToBlob(canvasElement);
+      downloadImage(blob, buildFilename());
       onSuccess(t("actions.downloadSuccess"));
     } catch (error) {
       console.error("Error downloading image:", error);
@@ -80,7 +69,7 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
       <button
         onClick={handleCopyToClipboard}
         disabled={isGenerating}
-        className="action-button copy-action"
+        className="action-button"
         title={t("actions.copyTitle")}
       >
         📋
@@ -88,16 +77,11 @@ export const RouletteActions: React.FC<RouletteActionsProps> = ({
       <button
         onClick={handleDownload}
         disabled={isGenerating}
-        className="action-button download-action"
+        className="action-button"
         title={t("actions.downloadTitle")}
       >
         💾
       </button>
-      {isGenerating && (
-        <div className="generating-indicator">
-          <div className="spinner"></div>
-        </div>
-      )}
     </div>
   );
 };

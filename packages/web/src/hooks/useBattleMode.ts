@@ -4,8 +4,16 @@ import { cryptoRandom, drawBattleSequence } from "@tainakanchu/roulette-core";
 const MS_PER_DRAW = 5;
 const MAX_DURATION_MS = 5000;
 const UI_UPDATE_INTERVAL_MS = 33;
-const SUDDEN_DEATH_FIRST_DELAY_MS = 500;
-const SUDDEN_DEATH_INTERVAL_MS = 280;
+
+// カウントダウン演出（3 → 2 → 1 → GO!）
+const COUNTDOWN_INTERVAL_MS = 720;
+const GO_HOLD_MS = 650;
+
+// サドンデスは意図的にゆっくり見せる（一瞬で終わらないように）
+const SUDDEN_DEATH_FIRST_DELAY_MS = 800;
+const SUDDEN_DEATH_INTERVAL_MS = 650;
+// 勝者が確定してから結果を出すまでの「タメ」
+const SUDDEN_DEATH_HOLD_MS = 1200;
 
 const calcDuration = (drawCount: number): number => {
   if (drawCount <= 0) return 0;
@@ -36,7 +44,10 @@ export const useBattleMode = ({
   const [isRunning, setIsRunning] = useState(false);
   const [isSuddenDeath, setIsSuddenDeath] = useState(false);
   const [result, setResult] = useState<BattleResult | null>(null);
+  // 3 | 2 | 1 | 0(=GO!) | null(=非カウントダウン)
+  const [countdownValue, setCountdownValue] = useState<number | null>(null);
   const cancelRef = useRef<(() => void) | null>(null);
+  const countdownRef = useRef<(() => void) | null>(null);
 
   const optionsKey = useMemo(() => options.join(",|,"), [options]);
 
@@ -53,6 +64,10 @@ export const useBattleMode = ({
       cancelRef.current();
       cancelRef.current = null;
     }
+    if (countdownRef.current !== null) {
+      countdownRef.current();
+      countdownRef.current = null;
+    }
   }, []);
 
   useEffect(() => () => cancel(), [cancel]);
@@ -61,14 +76,14 @@ export const useBattleMode = ({
     cancel();
     setIsRunning(false);
     setIsSuddenDeath(false);
+    setCountdownValue(null);
     setCounts(new Array(options.length).fill(0));
     setProcessedCount(0);
     setSuddenDeathCount(0);
     setResult(null);
   }, [cancel, options.length]);
 
-  const start = useCallback(() => {
-    if (isRunning) return;
+  const runRace = useCallback(() => {
     if (options.length === 0 || drawCount <= 0) return;
 
     const sequence = drawBattleSequence(options.length, drawCount);
@@ -126,7 +141,12 @@ export const useBattleMode = ({
 
         const uniqueTop = findUniqueTop();
         if (uniqueTop !== null) {
-          finishWith(uniqueTop);
+          // 勝者が出ても一拍タメてから結果を出す
+          const holdId = window.setTimeout(
+            () => finishWith(uniqueTop),
+            SUDDEN_DEATH_HOLD_MS
+          );
+          cancelRef.current = () => window.clearTimeout(holdId);
           return;
         }
 
@@ -178,7 +198,43 @@ export const useBattleMode = ({
 
     const rafId = requestAnimationFrame(step);
     cancelRef.current = () => cancelAnimationFrame(rafId);
-  }, [isRunning, options, drawCount, onFinish]);
+  }, [options, drawCount, onFinish]);
+
+  const start = useCallback(() => {
+    if (isRunning || countdownValue !== null) return;
+    if (options.length < 2 || drawCount <= 0) return;
+
+    // レーサーをスタートラインに（全て0）並べてカウントダウン
+    setCounts(new Array(options.length).fill(0));
+    setProcessedCount(0);
+    setSuddenDeathCount(0);
+    setResult(null);
+    setIsSuddenDeath(false);
+    setCountdownValue(3);
+
+    let value = 3;
+    const tickCountdown = () => {
+      value -= 1;
+      if (value > 0) {
+        setCountdownValue(value);
+        const id = window.setTimeout(tickCountdown, COUNTDOWN_INTERVAL_MS);
+        countdownRef.current = () => window.clearTimeout(id);
+      } else {
+        setCountdownValue(0); // GO!
+        const id = window.setTimeout(() => {
+          setCountdownValue(null);
+          countdownRef.current = null;
+          runRace();
+        }, GO_HOLD_MS);
+        countdownRef.current = () => window.clearTimeout(id);
+      }
+    };
+
+    const id = window.setTimeout(tickCountdown, COUNTDOWN_INTERVAL_MS);
+    countdownRef.current = () => window.clearTimeout(id);
+  }, [isRunning, countdownValue, options.length, drawCount, runRace]);
+
+  const isCountingDown = countdownValue !== null;
 
   return {
     counts,
@@ -186,6 +242,8 @@ export const useBattleMode = ({
     suddenDeathCount,
     isRunning,
     isSuddenDeath,
+    countdownValue,
+    isCountingDown,
     result,
     start,
     reset,

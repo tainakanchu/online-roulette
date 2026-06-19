@@ -12,7 +12,7 @@ export const Snackbar: React.FC<SnackbarProps> = ({
   message,
   isVisible,
   onClose,
-  duration = 3000,
+  duration = 2500,
 }) => {
   const [isExiting, setIsExiting] = useState(false);
 
@@ -31,12 +31,7 @@ export const Snackbar: React.FC<SnackbarProps> = ({
 
   return (
     <div className={`snackbar ${isExiting ? "exiting" : ""}`}>
-      <div className="snackbar-content">
-        <span>{message}</span>
-        <button className="snackbar-close" onClick={onClose}>
-          ✕
-        </button>
-      </div>
+      <span className="snackbar-message">{message}</span>
     </div>
   );
 };

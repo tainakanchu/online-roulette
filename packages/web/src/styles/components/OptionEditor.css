@@ -1,0 +1,221 @@
+.option-editor {
+  margin-bottom: 26px;
+}
+
+.option-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.8rem;
+}
+
+.option-editor-tools {
+  display: flex;
+  gap: 10px;
+}
+
+.option-tool-button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.option-tool-button:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.option-tool-button--danger {
+  color: rgba(255, 109, 143, 0.85);
+}
+
+.option-tool-button--danger:hover:not(:disabled) {
+  color: #ff6d8f;
+}
+
+.option-tool-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- chip tray ---- */
+.chip-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 46px;
+  padding: 11px;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px 7px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+  animation: rkPop 0.28s ease;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.chip-remove {
+  border: none;
+  background: rgba(0, 0, 0, 0.22);
+  color: inherit;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.chip-remove:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.chip-tray-empty {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  align-self: center;
+}
+
+/* ---- add row ---- */
+.option-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.option-add-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.option-add-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.option-add-input:focus {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.option-add-button {
+  padding: 0 22px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #06262b;
+  background: linear-gradient(135deg, #27e1c1, #4fc3f7);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 0.2s, transform 0.1s;
+}
+
+.option-add-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.option-add-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.option-add-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- bulk edit textarea ---- */
+.options-input {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  resize: vertical;
+  outline: none;
+}
+
+.options-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ---- shuffle row ---- */
+.shuffle-row {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.shuffle-count-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.shuffle-count-input {
+  width: 56px;
+  padding: 7px 8px;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  outline: none;
+}
+
+.shuffle-button {
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.shuffle-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.shuffle-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

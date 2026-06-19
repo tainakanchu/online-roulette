@@ -5,7 +5,7 @@
     "quickMode": "快速模式"
   },
   "input": {
-    "title": "請輸入選項",
+    "title": "你的選項",
     "placeholder": "請以換行分隔輸入選項",
     "shuffleCount": "洗牌次數:",
     "shuffle": "洗牌",
@@ -14,8 +14,8 @@
   },
   "result": {
     "selecting": "選擇中...",
-    "label": "結果",
-    "default": "結果將顯示在這裏"
+    "label": "勝出",
+    "default": "轉動輪盤吧！"
   },
   "actions": {
     "copySuccess": "已複製結果圖片到剪貼簿!",
@@ -61,5 +61,14 @@
     "clearAll": "全部刪除",
     "clearConfirm": "確定要刪除所有歷史記錄嗎?",
     "showHistory": "顯示歷史"
+  },
+  "ui": {
+    "tagline": "轉動輪盤決定命運",
+    "empty": "新增選項以開始",
+    "add": "新增選項...",
+    "bulk": "批次編輯",
+    "clear": "清除",
+    "leading": "領先",
+    "go": "GO!"
   }
 }

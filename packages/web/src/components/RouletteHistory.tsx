@@ -21,6 +21,8 @@ export const RouletteHistory = ({ history, onClear }: RouletteHistoryProps) => {
     });
   };
 
+  const count = history.entries.length;
+
   return (
     <>
       <button
@@ -28,15 +30,14 @@ export const RouletteHistory = ({ history, onClear }: RouletteHistoryProps) => {
         onClick={() => setIsOpen(!isOpen)}
         aria-label={t("history.showHistory")}
       >
-        📜 {t("history.toggle")}{" "}
-        {history.entries.length > 0 && `(${history.entries.length})`}
+        📜 {t("history.toggle")} {count > 0 && `(${count})`}
       </button>
 
       {isOpen && (
         <div className="history-modal-overlay" onClick={() => setIsOpen(false)}>
           <div className="history-modal" onClick={(e) => e.stopPropagation()}>
             <div className="history-header">
-              <h2>🎯 {t("history.title")}</h2>
+              <h2>🏆 {t("history.title")}</h2>
               <button
                 className="history-close-button"
                 onClick={() => setIsOpen(false)}
@@ -47,7 +48,7 @@ export const RouletteHistory = ({ history, onClear }: RouletteHistoryProps) => {
             </div>
 
             <div className="history-content">
-              {history.entries.length === 0 ? (
+              {count === 0 ? (
                 <p className="history-empty">{t("history.empty")}</p>
               ) : (
                 <>

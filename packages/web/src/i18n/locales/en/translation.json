@@ -1,21 +1,21 @@
 {
   "app": {
     "title": "Lucky Roulette",
-    "spin": "Spin",
+    "spin": "SPIN",
     "quickMode": "Quick Mode"
   },
   "input": {
-    "title": "Enter your options",
+    "title": "Your options",
     "placeholder": "Enter options separated by line breaks",
-    "shuffleCount": "Shuffle count:",
+    "shuffleCount": "Shuffle x",
     "shuffle": "Shuffle",
     "helpText": "* You can also specify comma-separated options via the URL's options query parameter",
     "helpExample": "Example: ?options=Option1,Option2,Option3"
   },
   "result": {
     "selecting": "Selecting...",
-    "label": "Result",
-    "default": "Result will appear here"
+    "label": "Winner",
+    "default": "Spin the wheel!"
   },
   "actions": {
     "copySuccess": "Result image copied to clipboard!",
@@ -27,7 +27,7 @@
   },
   "mode": {
     "roulette": "Roulette",
-    "grouping": "Group Division",
+    "grouping": "Groups",
     "battle": "Battle"
   },
   "grouping": {
@@ -61,5 +61,14 @@
     "clearAll": "Clear all",
     "clearConfirm": "Clear all history?",
     "showHistory": "Show history"
+  },
+  "ui": {
+    "tagline": "Spin to decide your fate",
+    "empty": "Add options to begin",
+    "add": "Add an option...",
+    "bulk": "Bulk edit",
+    "clear": "Clear",
+    "leading": "Leading",
+    "go": "GO!"
   }
 }

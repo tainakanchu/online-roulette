@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>作業ノート: Game Show UI リデザイン</title>
+<style>
+  body { font-family: system-ui, sans-serif; line-height: 1.7; max-width: 900px; margin: 2rem auto; padding: 0 1.2rem; color: #222; background: #fafafa; }
+  h1 { border-bottom: 3px solid #7B2FF7; padding-bottom: .3rem; }
+  h2 { margin-top: 2rem; border-left: 5px solid #FF3D8A; padding-left: .6rem; }
+  h3 { color: #555; }
+  code { background: #eee; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  pre { background: #1d0f3d; color: #eee; padding: .8rem; border-radius: 8px; overflow-x: auto; }
+  .done { color: #2E8B57; font-weight: 700; }
+  .wip { color: #FF8C00; font-weight: 700; }
+  .todo { color: #888; }
+  .note { background: #fff3cd; border: 1px solid #ffe08a; padding: .6rem 1rem; border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
+  th { background: #f0e8ff; }
+</style>
+</head>
+<body>
+<h1>🎯 作業ノート: Online Roulette「Game Show」UI リデザイン</h1>
+<p>開始日: 2026-06-18 / ブランチ: <code>feat/game-show-redesign</code> / worktree: <code>roulette-feat-game-show-redesign</code></p>
+
+<h2>タスク概要・目的</h2>
+<p>ユーザーが <code>Online roulette repository.zip</code> として配布したデザインハンドオフ（<code>design_handoff_roulette_redesign/</code>）に基づき、
+既存のライト基調・カード型 UI を、ネオンの「ゲームショー」ステージ風 UI に一新する。</p>
+<ul>
+  <li>ダークな紫/ピンクのグラデ背景 + 浮遊する光の blob</li>
+  <li>glassmorphism パネル、電球付きの回転ホイール + 中央ハブ</li>
+  <li>textarea の代わりに <strong>チップ式の選択肢エディタ</strong>（bulk edit は残す）</li>
+  <li>勝利時の <strong>紙吹雪（confetti）</strong> + 大きな当選演出</li>
+  <li>より緊張感のある <strong>Battle</strong> モード（カウントダウン、リーダーバナー、メダル/王冠、ゆっくりサドンデス）</li>
+  <li>Fredoka フォント、5言語 i18n は維持</li>
+</ul>
+
+<h2>Issue / 指示の自分の理解</h2>
+<ul>
+  <li>ハンドオフ HTML（<code>.dc.html</code>）は<strong>そのまま出荷しない</strong>。既存の monorepo 構造（React18 + TS + Vite、<code>packages/core</code>のロジック）に合わせて再現する。</li>
+  <li>既存のコンポーネント/フック構造を再利用し、<strong>見た目と新しいインタラクション層のみ</strong>を追加・変更する。</li>
+  <li>ユーザー指示「既存の構造に合わせていい感じに。終わったらPR出して」。</li>
+  <li><span class="note">★ユーザー判断: <strong>ポインタは3時（右）の位置を維持</strong>。→ プロトタイプの「上ポインタ + 選択計算変更（270度式）」は採用せず、<code>packages/core</code> の選択ロジックとテストは無変更。矢印だけネオン調（ゴールド）にして右側に描画する。</span></li>
+</ul>
+
+<h2>既存コードの構造（調査結果）</h2>
+<table>
+  <tr><th>領域</th><th>ファイル</th><th>メモ</th></tr>
+  <tr><td>ロジック(core)</td><td>colors / roulette / grouping / battle / shuffle</td><td>COLORS, getColorBrightness, divideIntoGroups, drawBattleSequence, createDefaultRouletteLogic 等をエクスポート。<strong>無変更で再利用</strong>。</td></tr>
+  <tr><td>状態フック</td><td>useRouletteOptions / useRouletteAnimation / useRouletteHistory / useGroupDivision / useBattleMode / useSnackbar</td><td>これらを温存しつつ拡張する。</td></tr>
+  <tr><td>CSS</td><td>plain global CSS（CSS Modulesではない）を <code>import</code> 副作用で読み込み</td><td>ハンドオフは「CSS Modules」と書くが実体は global class CSS。<strong>既存方式に合わせ class ベースで全面リスタイル</strong>。</td></tr>
+</table>
+
+<h2>採用方針 / 設計判断</h2>
+<ul>
+  <li><strong>confetti</strong>: <code>useConfetti</code> フックを新設（canvas ref + fire()）。パネル内に absolute 配置。roulette/groups/battle の勝利時に App 側で発火。</li>
+  <li><strong>選択肢エディタ</strong>: <code>OptionEditor</code> を新設（chips + 追加input + bulk textarea + shuffle）。<code>useRouletteOptions</code> に <code>newOption</code> / <code>addOption</code> / <code>removeOption</code> / <code>clearOptions</code> / <code>showBulkEdit</code> を追加。</li>
+  <li><strong>選択肢変更時の stale 結果リセット</strong>: App 側で add/remove/clear 時に roulette結果と groups をリセット。battle は optionsKey effect で自動リセット。</li>
+  <li><strong>ホイール</strong>: <code>RouletteCanvas</code> を 460×460 固定 + 電球/ハブ/<strong>右側ゴールド矢印</strong>に。クリックで spin。選択計算は core 既存式のまま。</li>
+  <li><strong>コピー/DL</strong>: プロトタイプ同様、合成画像ではなくホイール canvas を直接書き出す方向で <code>RouletteActions</code> を簡素化（新しい暗色ホイールが白背景合成と相性悪いため）。</li>
+  <li><strong>Battle</strong>: <code>useBattleMode</code> に <code>countdownValue</code> を追加し、start→カウントダウン(3/2/1/GO)→レース。サドンデスは初回800ms/以降650ms + 勝者確定前に1200ms hold。リーダーバナー/メダル/王冠を <code>BattleBars</code>・<code>BattleMode</code> に。</li>
+  <li><strong>テーマCSS</strong>: 旧 light/dark の <code>prefers-color-scheme</code> 切替を廃し、常時ネオンダークに。<code>index.css</code> のグローバル button/色スキームを中和。</li>
+  <li><strong>i18n</strong>: 新キー追加（<code>ui.tagline / ui.empty / ui.add / ui.bulk / ui.clear / ui.leading / ui.go</code>）を全5言語に。既存の title/spin 等の文言はプロトタイプ寄りに微調整（spin="SPIN"/"回す" 等は維持）。</li>
+</ul>
+
+<h2>進捗</h2>
+<ul>
+  <li class="done">調査完了（プロトタイプ全読解・既存コード把握）</li>
+  <li class="done">worktree 作成・pnpm install</li>
+  <li class="done">グローバルテーマ（背景・blob・パネル・Fredoka・keyframes）</li>
+  <li class="done">OptionEditor（チップ式）+ useRouletteOptions 拡張</li>
+  <li class="done">useConfetti 新設 + 3モードで発火結線</li>
+  <li class="done">ルーレット（460canvas・電球・ハブ・右3時ゴールド矢印・クリックspin・結果演出・copy/DL）</li>
+  <li class="done">グループ分け（ダークテーマのカード/アニメ）</li>
+  <li class="done">バトル（カウントダウン3→2→1→GO・リーダーバナー・メダル/王冠・ゆっくりサドンデス+1200ms hold・勝者カード）</li>
+  <li class="done">履歴モーダル・スナックバー・フッター・言語切替・モード切替のリスタイル</li>
+  <li class="done">i18n 全5言語に ui.* 追加 + 文言調整</li>
+  <li class="done">検証: type-check ✅ / lint ✅ / build ✅ / core test 25 passed ✅</li>
+  <li class="done">ブラウザ実機確認: 3モードすべて期待通りに描画（スクショ確認済）</li>
+</ul>
+
+<h2>検証結果サマリ</h2>
+<ul>
+  <li><strong>ルーレット</strong>: ネオンホイール＋右3時ゴールド矢印で「🎉 Salad」当選、コピー/DLボタン表示。core の選択ロジック無変更で矢印位置と整合。</li>
+  <li><strong>バトル</strong>: GO! カウントダウン → ランキングバー（🥇Sushi/🥈Tacos/🥉Salad）→「🏆 勝者 Sushi」。リーダーバナーはレース終了で消滅。</li>
+  <li><strong>グループ</strong>: 「🎊 グループ分け結果」で Group 1/2 のダークカード表示。</li>
+</ul>
+
+<h2>ハマりポイント / 罠</h2>
+<ul>
+  <li>worktree には node_modules が無いので <code>pnpm install</code> 必須（type-check/build用）。</li>
+  <li><code>index.css</code> の global <code>button{background:#1a1a1a}</code> と <code>:root</code> color-scheme が新デザインと衝突 → 中和する。</li>
+  <li>StrictMode 下で confetti/battle の rAF・timer が二重発火しないようクリーンアップ必須。</li>
+</ul>
+
+</body>
+</html>
