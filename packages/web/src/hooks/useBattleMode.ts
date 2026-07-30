@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { cryptoRandom, drawBattleSequence } from "@tainakanchu/roulette-core";
+import { cryptoRandom } from "@tainakanchu/roulette-core";
+import type {
+  BattleWorkerRequest,
+  BattleWorkerResponse,
+} from "../workers/battleWorker";
 
 const MS_PER_DRAW = 5;
 const MAX_DURATION_MS = 5000;
 const UI_UPDATE_INTERVAL_MS = 33;
+
+// この回数までは抽選順どおりのペース演出を維持し、
+// 超える場合は Worker の実進捗をそのまま表示する
+const PACED_DRAW_LIMIT = 100000;
 
 // カウントダウン演出（3 → 2 → 1 → GO!）
 const COUNTDOWN_INTERVAL_MS = 720;
@@ -48,6 +56,7 @@ export const useBattleMode = ({
   const [countdownValue, setCountdownValue] = useState<number | null>(null);
   const cancelRef = useRef<(() => void) | null>(null);
   const countdownRef = useRef<(() => void) | null>(null);
+  const workerRef = useRef<Worker | null>(null);
 
   const optionsKey = useMemo(() => options.join(",|,"), [options]);
 
@@ -60,6 +69,10 @@ export const useBattleMode = ({
   }, [optionsKey]);
 
   const cancel = useCallback(() => {
+    if (workerRef.current !== null) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
     if (cancelRef.current !== null) {
       cancelRef.current();
       cancelRef.current = null;
@@ -86,10 +99,8 @@ export const useBattleMode = ({
   const runRace = useCallback(() => {
     if (options.length === 0 || drawCount <= 0) return;
 
-    const sequence = drawBattleSequence(options.length, drawCount);
-    const duration = calcDuration(drawCount);
-    const startTime = performance.now();
-    const initialCounts = new Array(options.length).fill(0);
+    const optionCount = options.length;
+    const initialCounts = new Array(optionCount).fill(0);
     setCounts(initialCounts);
     setProcessedCount(0);
     setSuddenDeathCount(0);
@@ -98,8 +109,6 @@ export const useBattleMode = ({
     setIsRunning(true);
 
     const localCounts = [...initialCounts];
-    let lastProcessed = 0;
-    let lastUiUpdate = 0;
 
     const finishWith = (winnerIdx: number) => {
       setResult({
@@ -158,34 +167,10 @@ export const useBattleMode = ({
       cancelRef.current = () => window.clearTimeout(timeoutId);
     };
 
-    const step = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = duration === 0 ? 1 : Math.min(elapsed / duration, 1);
-      const target = Math.floor(progress * sequence.length);
-
-      if (target > lastProcessed) {
-        for (let i = lastProcessed; i < target; i += 1) {
-          localCounts[sequence[i]] += 1;
-        }
-        lastProcessed = target;
-        if (now - lastUiUpdate >= UI_UPDATE_INTERVAL_MS) {
-          setCounts(localCounts.slice());
-          setProcessedCount(target);
-          lastUiUpdate = now;
-        }
-      }
-
-      if (progress < 1) {
-        const rafId = requestAnimationFrame(step);
-        cancelRef.current = () => cancelAnimationFrame(rafId);
-        return;
-      }
-
-      for (let i = lastProcessed; i < sequence.length; i += 1) {
-        localCounts[sequence[i]] += 1;
-      }
+    // 全数を集計し終えた後の共通処理（同点ならサドンデスへ）
+    const settle = () => {
       setCounts([...localCounts]);
-      setProcessedCount(sequence.length);
+      setProcessedCount(drawCount);
 
       const uniqueTop = findUniqueTop();
       if (uniqueTop !== null) {
@@ -196,8 +181,86 @@ export const useBattleMode = ({
       runSuddenDeath();
     };
 
-    const rafId = requestAnimationFrame(step);
-    cancelRef.current = () => cancelAnimationFrame(rafId);
+    // 抽選順どおりに見せるペース演出（drawCount × 5ms・最大 5 秒）
+    const runPaced = (sequence: number[]) => {
+      const duration = calcDuration(sequence.length);
+      const startTime = performance.now();
+      let lastProcessed = 0;
+      let lastUiUpdate = 0;
+
+      const step = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = duration === 0 ? 1 : Math.min(elapsed / duration, 1);
+        const target = Math.floor(progress * sequence.length);
+
+        if (target > lastProcessed) {
+          for (let i = lastProcessed; i < target; i += 1) {
+            localCounts[sequence[i]] += 1;
+          }
+          lastProcessed = target;
+          if (now - lastUiUpdate >= UI_UPDATE_INTERVAL_MS) {
+            setCounts(localCounts.slice());
+            setProcessedCount(target);
+            lastUiUpdate = now;
+          }
+        }
+
+        if (progress < 1) {
+          const rafId = requestAnimationFrame(step);
+          cancelRef.current = () => cancelAnimationFrame(rafId);
+          return;
+        }
+
+        for (let i = lastProcessed; i < sequence.length; i += 1) {
+          localCounts[sequence[i]] += 1;
+        }
+        settle();
+      };
+
+      const rafId = requestAnimationFrame(step);
+      cancelRef.current = () => cancelAnimationFrame(rafId);
+    };
+
+    workerRef.current?.terminate();
+    const worker = new Worker(
+      new URL("../workers/battleWorker.ts", import.meta.url),
+      { type: "module" },
+    );
+    workerRef.current = worker;
+
+    const releaseWorker = () => {
+      worker.terminate();
+      if (workerRef.current === worker) workerRef.current = null;
+    };
+
+    worker.onmessage = (e: MessageEvent<BattleWorkerResponse>) => {
+      const message = e.data;
+
+      if (message.type === "sequence") {
+        releaseWorker();
+        runPaced(message.sequence);
+        return;
+      }
+
+      if (message.type === "progress") {
+        setCounts(message.counts);
+        setProcessedCount(message.processed);
+        return;
+      }
+
+      releaseWorker();
+      message.counts.forEach((count, i) => {
+        localCounts[i] = count;
+      });
+      settle();
+    };
+
+    const request: BattleWorkerRequest = {
+      optionCount,
+      drawCount,
+      wantSequence: drawCount <= PACED_DRAW_LIMIT,
+    };
+    worker.postMessage(request);
   }, [options, drawCount, onFinish]);
 
   const start = useCallback(() => {

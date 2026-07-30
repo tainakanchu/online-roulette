@@ -14,6 +14,10 @@ import { shuffleArray } from "@tainakanchu/roulette-core";
 const SHUFFLE_COUNT_STORAGE_KEY = "roulette-shuffle-count";
 const QUICK_MODE_STORAGE_KEY = "roulette-quick-mode";
 
+// Fisher-Yates は 1 回で一様分布になり、一様シャッフルを何回重ねても分布は変わらない。
+// よって見せる tick 数だけ打ち切っても、入力されたシャッフル回数と結果の分布は同じ。
+const SHUFFLE_ANIMATION_MAX_TICKS = 1000;
+
 const toOptions = (text: string): string[] =>
   text
     .split("\n")
@@ -168,6 +172,7 @@ export const useRouletteOptions = ({
 
     // おみくじを振るような「シャカシャカ」音を開始
     shakeSound.start();
+    const ticks = Math.min(shuffleCount, SHUFFLE_ANIMATION_MAX_TICKS);
     let count = 0;
 
     const intervalId = setInterval(() => {
@@ -179,7 +184,7 @@ export const useRouletteOptions = ({
         const shuffled = shuffleArray(currentOptions);
         const nextText = shuffled.join("\n");
 
-        if (count >= shuffleCount) {
+        if (count >= ticks) {
           clearInterval(intervalId);
           shakeSound.stop();
           // 最後にURLを更新

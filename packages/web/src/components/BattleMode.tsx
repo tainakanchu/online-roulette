@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { readLocalStorage, writeLocalStorage } from "../utils/localStorage";
 import { useBattleMode } from "../hooks/useBattleMode";
 import { BattleBars } from "./BattleBars";
-import { BattleControls } from "./BattleControls";
+import { BattleControls, MAX_DRAW_COUNT } from "./BattleControls";
 
 const DRAW_COUNT_STORAGE_KEY = "roulette-battle-draw-count";
 const DEFAULT_DRAW_COUNT = 1000;
@@ -19,7 +19,7 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
   const [drawCount, setDrawCount] = useState(() => {
     const stored = readLocalStorage(DRAW_COUNT_STORAGE_KEY);
     const parsed = stored ? Number.parseInt(stored, 10) : NaN;
-    if (!Number.isNaN(parsed) && parsed >= 1) return parsed;
+    if (!Number.isNaN(parsed) && parsed >= 1) return Math.min(parsed, MAX_DRAW_COUNT);
     return DEFAULT_DRAW_COUNT;
   });
 
@@ -30,7 +30,7 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
   const handleDrawCountChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const value = Number.parseInt(e.target.value, 10);
     if (!Number.isNaN(value) && value >= 1) {
-      setDrawCount(value);
+      setDrawCount(Math.min(value, MAX_DRAW_COUNT));
     }
   }, []);
 
