@@ -1,6 +1,9 @@
 import { type ChangeEvent, type FC } from "react";
 import { useTranslation } from "react-i18next";
 
+// 抽選自体は Worker でチャンク集計するため UI は固まらない。計算時間由来の実用上限
+export const MAX_DRAW_COUNT = 1_000_000_000;
+
 interface BattleControlsProps {
   drawCount: number;
   onDrawCountChange: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -34,7 +37,7 @@ export const BattleControls: FC<BattleControlsProps> = ({
           id="battle-draw-count"
           type="number"
           min="1"
-          max="100000"
+          max={MAX_DRAW_COUNT}
           step="1"
           value={drawCount}
           onChange={onDrawCountChange}
@@ -54,7 +57,7 @@ export const BattleControls: FC<BattleControlsProps> = ({
         <button
           type="button"
           onClick={onReset}
-          disabled={locked || (!hasResult && processedCount === 0)}
+          disabled={!locked && !hasResult && processedCount === 0}
           className="battle-reset-button"
         >
           {t("battle.reset")}
