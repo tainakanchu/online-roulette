@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { RouletteCanvas, RouletteCanvasRef } from "./components/RouletteCanvas";
 import { RouletteResult } from "./components/RouletteResult";
 import { OptionEditor } from "./components/OptionEditor";
-import { RouletteActions } from "./components/RouletteActions";
+import { ImageActions } from "./components/ImageActions";
 import { BattleMode } from "./components/BattleMode";
 import { useRouletteOptions } from "./hooks/useRouletteOptions";
 import { useRouletteAnimation } from "./hooks/useRouletteAnimation";
@@ -20,6 +20,7 @@ import { GroupAnimation } from "./components/GroupAnimation";
 import { GroupResultDisplay } from "./components/GroupResultDisplay";
 import { useGroupDivision } from "./hooks/useGroupDivision";
 import { readLocalStorage, writeLocalStorage } from "./utils/localStorage";
+import { canvasToBlob } from "./utils/imageUtils";
 
 // スタイルのインポート
 import "./styles/base.css";
@@ -140,6 +141,12 @@ function App() {
     [resetGroups],
   );
 
+  const getRouletteBlob = useCallback(async () => {
+    const canvas = canvasRef.current?.getCanvas();
+    if (!canvas) throw new Error("Canvas not available");
+    return canvasToBlob(canvas);
+  }, []);
+
   const isBusy = isSpinning || isDividing;
   const canSpin = hasOptions && !isSpinning;
 
@@ -191,10 +198,11 @@ function App() {
                 onSpin={spin}
                 canSpin={canSpin}
               />
-              <RouletteActions
-                canvasElement={canvasRef.current?.getCanvas() || null}
+              <ImageActions
+                getBlob={getRouletteBlob}
                 isVisible={!!currentOption && !isSpinning}
                 onSuccess={showSnackbar}
+                filenamePrefix="roulette-result"
               />
             </div>
             <RouletteResult isSpinning={isSpinning} currentOption={currentOption} />
@@ -255,12 +263,18 @@ function App() {
               />
             )}
 
-            {groups && !isDividing && <GroupResultDisplay groups={groups} />}
+            {groups && !isDividing && (
+              <GroupResultDisplay groups={groups} onNotify={showSnackbar} />
+            )}
           </div>
         )}
 
         {mode === "battle" && (
-          <BattleMode options={options} onFinish={handleBattleFinish} />
+          <BattleMode
+            options={options}
+            onFinish={handleBattleFinish}
+            onNotify={showSnackbar}
+          />
         )}
 
         <Footer />

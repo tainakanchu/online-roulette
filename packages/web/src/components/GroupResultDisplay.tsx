@@ -1,16 +1,45 @@
-import { type FC } from "react";
+import { type FC, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { getColorBrightness, type GroupResult } from "@tainakanchu/roulette-core";
+import { generateGroupResultImage } from "../utils/imageUtils";
+import { ImageActions } from "./ImageActions";
 
 interface GroupResultDisplayProps {
   groups: GroupResult[];
+  /** 画像コピー/ダウンロードの結果を通知する */
+  onNotify?: (message: string) => void;
 }
 
-export const GroupResultDisplay: FC<GroupResultDisplayProps> = ({ groups }) => {
-  const { t } = useTranslation();
+export const GroupResultDisplay: FC<GroupResultDisplayProps> = ({
+  groups,
+  onNotify,
+}) => {
+  const { t, i18n } = useTranslation();
+
+  const getResultBlob = useCallback(
+    () =>
+      generateGroupResultImage({
+        groups,
+        labels: {
+          title: t("grouping.resultTitle"),
+          membersLabel: (count: number) => t("grouping.members", { count }),
+        },
+        language: i18n.language,
+      }),
+    [groups, i18n.language, t]
+  );
 
   return (
     <div className="group-result">
+      {onNotify && (
+        <ImageActions
+          getBlob={getResultBlob}
+          isVisible
+          onSuccess={onNotify}
+          filenamePrefix="group-result"
+          className="image-actions--card"
+        />
+      )}
       <h3 className="group-result-title">🎊 {t("grouping.resultTitle")}</h3>
       <div className="group-result-grid">
         {groups.map((group, index) => {

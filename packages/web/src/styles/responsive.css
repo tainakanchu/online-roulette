@@ -35,6 +35,18 @@
     grid-template-columns: 1fr !important;
   }
 
+  .group-result-title {
+    padding: 0;
+  }
+
+  /* 狭い画面ではカード内のボタンをタイトルと重ねず、上部中央に並べる */
+  .roulette-actions.image-actions--card {
+    position: static;
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
   .history-toggle-button {
     font-size: 13px;
     padding: 8px 14px;
