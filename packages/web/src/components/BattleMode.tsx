@@ -2,8 +2,10 @@ import { type ChangeEvent, type FC, useCallback, useEffect, useState } from "rea
 import { useTranslation } from "react-i18next";
 import { readLocalStorage, writeLocalStorage } from "../utils/localStorage";
 import { useBattleMode } from "../hooks/useBattleMode";
+import { generateBattleResultImage } from "../utils/imageUtils";
 import { BattleBars } from "./BattleBars";
 import { BattleControls } from "./BattleControls";
+import { ImageActions } from "./ImageActions";
 
 const DRAW_COUNT_STORAGE_KEY = "roulette-battle-draw-count";
 const DEFAULT_DRAW_COUNT = 1000;
@@ -11,10 +13,16 @@ const DEFAULT_DRAW_COUNT = 1000;
 interface BattleModeProps {
   options: string[];
   onFinish?: (winner: string) => void;
+  /** 画像コピー/ダウンロードの結果を通知する */
+  onNotify?: (message: string) => void;
 }
 
-export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
-  const { t } = useTranslation();
+export const BattleMode: FC<BattleModeProps> = ({
+  options,
+  onFinish,
+  onNotify,
+}) => {
+  const { t, i18n } = useTranslation();
 
   const [drawCount, setDrawCount] = useState(() => {
     const stored = readLocalStorage(DRAW_COUNT_STORAGE_KEY);
@@ -69,6 +77,22 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
   const leaderActive = racing && anyCount && leaderIdx >= 0;
   const leaderName = leaderIdx >= 0 ? options[leaderIdx] : "";
 
+  const getResultBlob = useCallback(async () => {
+    if (!result) throw new Error("No battle result");
+    return generateBattleResultImage({
+      options,
+      counts: result.counts,
+      winner: result.winner,
+      drawCount: result.counts.reduce((sum, count) => sum + count, 0),
+      labels: {
+        title: t("mode.battle"),
+        winnerLabel: t("battle.winner"),
+        drawsLabel: t("battle.drawCount"),
+      },
+      language: i18n.language,
+    });
+  }, [i18n.language, options, result, t]);
+
   const countdownDisplay =
     countdownValue === 0
       ? t("ui.go")
@@ -121,6 +145,15 @@ export const BattleMode: FC<BattleModeProps> = ({ options, onFinish }) => {
 
       {result && (
         <div className="battle-winner">
+          {onNotify && (
+            <ImageActions
+              getBlob={getResultBlob}
+              isVisible
+              onSuccess={onNotify}
+              filenamePrefix="battle-result"
+              className="image-actions--card"
+            />
+          )}
           <div className="battle-winner-label">{t("battle.winner")}</div>
           <div className="battle-winner-value">{result.winner}</div>
         </div>

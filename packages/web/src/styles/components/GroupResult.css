@@ -48,11 +48,14 @@
 
 /* ===== Result grid ===== */
 .group-result {
+  position: relative;
   margin-top: 1.5rem;
 }
 
 .group-result-title {
   margin: 0 0 1rem;
+  /* 右上の画像アクションボタンと重ならないように左右を空ける */
+  padding: 0 92px;
   text-align: center;
   font-size: 1.2rem;
   font-weight: 600;

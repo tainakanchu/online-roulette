@@ -31,3 +31,10 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* カード（バトルの勝者カード / グループ分け結果）内に置く場合の配置 */
+.roulette-actions.image-actions--card {
+  top: 10px;
+  right: 10px;
+  flex-direction: row;
+}

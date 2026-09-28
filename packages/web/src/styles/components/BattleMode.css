@@ -216,6 +216,7 @@
 
 /* ===== Winner card ===== */
 .battle-winner {
+  position: relative;
   margin-top: 20px;
   padding: 18px;
   text-align: center;
