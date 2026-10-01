@@ -486,13 +486,12 @@ export class RaceScene {
     line.rotation.x = -Math.PI / 2;
     line.position.set(FINISH_X, 0.02, 0);
     line.receiveShadow = true;
-    for (const side of [-1, 1]) {
-      const pole = add(new THREE.CylinderGeometry(0.1, 0.1, 5, 10), white);
-      pole.position.set(FINISH_X, 2.5, side * (TRACK_HALF_WIDTH + 1.2));
-      const disc = add(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 32), red);
-      disc.rotation.x = Math.PI / 2;
-      disc.position.set(FINISH_X, 4.6, side * (TRACK_HALF_WIDTH + 1.2));
-    }
+    // ゴール板は内ラチ側だけ（スタンド側のカメラから馬越しに見える）
+    const pole = add(new THREE.CylinderGeometry(0.1, 0.1, 5, 10), white);
+    pole.position.set(FINISH_X, 2.5, TRACK_HALF_WIDTH + 1.2);
+    const disc = add(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 32), red);
+    disc.rotation.x = Math.PI / 2;
+    disc.position.set(FINISH_X, 4.6, TRACK_HALF_WIDTH + 1.2);
     // ハロン棒（残り距離）。共有ジオメトリ・マテリアルで本数が増えても軽く
     const poleGeo = track(new THREE.CylinderGeometry(0.08, 0.08, 3, 8));
     const signGeo = track(new THREE.PlaneGeometry(2.2, 0.6));
@@ -528,6 +527,11 @@ export class RaceScene {
     if (this.shot === shot && !force) return;
     this.shot = shot;
     this.shotTime = 0;
+    // 勝ち馬のアップでは他馬の名前ラベルが大きく重なるので、勝ち馬のラベルだけ残す
+    const winner = this.race?.winner ?? -1;
+    this.horses.forEach((horse, i) => {
+      horse.label.visible = shot !== "winner" || i === winner;
+    });
     if (cut) {
       this.computeShot(0);
       this.camera.position.copy(this.desiredPos);
@@ -720,8 +724,8 @@ export class RaceScene {
         this.desiredLook.set(px - 1, 1.3, 0);
         break;
       case "finish":
-        // 写真判定カメラ（ゴール板の円盤の下からゴール線を真横に）
-        this.desiredPos.set(FINISH_X + 0.15, 2.3, -(TRACK_HALF_WIDTH + 11));
+        // 写真判定カメラ（スタンド前からゴール線を真横に。奥に内ラチ側のゴール板）
+        this.desiredPos.set(FINISH_X + 0.15, 2.2, -(TRACK_HALF_WIDTH + 6));
         this.desiredLook.set(FINISH_X, 1.2, 0);
         break;
       case "winner": {

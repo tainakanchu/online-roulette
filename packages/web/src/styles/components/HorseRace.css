@@ -128,13 +128,14 @@
 
 .race-distance-presets {
   display: flex;
-  flex-wrap: wrap;
   gap: 4px;
   margin-top: 6px;
 }
 
 .race-distance-preset {
-  padding: 4px 10px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4px 0;
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
@@ -898,14 +899,7 @@
   }
 
   .race-distance-presets {
-    flex-wrap: nowrap;
     gap: 3px;
-  }
-
-  .race-distance-preset {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 4px 0;
   }
 
   .race-commentary {
