@@ -28,7 +28,8 @@
   "mode": {
     "roulette": "Roulette",
     "grouping": "Grup",
-    "battle": "Pertarungan"
+    "battle": "Pertarungan",
+    "horseRace": "Pacuan"
   },
   "grouping": {
     "groupCount": "Jumlah grup:",
@@ -70,5 +71,101 @@
     "clear": "Hapus",
     "leading": "Memimpin",
     "go": "GO!"
+  },
+  "race": {
+    "distance": "Jarak",
+    "distances": {
+      "sprint": "Pendek {{meters}}m",
+      "mile": "Mil {{meters}}m",
+      "long": "Jauh {{meters}}m"
+    },
+    "start": "Mulai!",
+    "reset": "Kembali ke gerbang",
+    "loading": "Menyiapkan arena pacuan…",
+    "webglError": "Browser Anda tidak mendukung grafis 3D, jadi mode Pacuan tidak dapat ditampilkan.",
+    "needTwo": "Tambahkan minimal 2 kuda untuk balapan",
+    "overflow": "Maksimal {{max}} kuda ({{count}} dikeluarkan)",
+    "fullscreen": "Layar penuh",
+    "exitFullscreen": "Keluar layar penuh",
+    "remaining": "Sisa {{meters}}m",
+    "goal": "Finis!",
+    "slowMotion": "SLOW",
+    "styles": {
+      "front": "Pelari depan",
+      "stalker": "Pengintai",
+      "closer": "Penyusul",
+      "deep": "Penyusul akhir"
+    },
+    "card": {
+      "title": "Koran Pacuan Roulette",
+      "raceName": "Balapan Utama · Roulette Stakes (G1)",
+      "course": "Rumput {{meters}}m",
+      "field": "{{count}} kuda",
+      "headlines": {
+        "front": "Jagoan kami: {{name}}, berlari di depan sampai finis",
+        "stalker": "Jagoan kami: {{name}}, menyerang dari posisi depan",
+        "closer": "Jagoan kami: {{name}}, menyalip di lintasan akhir",
+        "deep": "Jagoan kami: {{name}}, menyerbu dari belakang"
+      },
+      "frame": "Gerbang",
+      "number": "No.",
+      "mark": "Prediksi",
+      "name": "Kuda",
+      "style": "Gaya",
+      "form": "5 terakhir",
+      "training": "Latihan",
+      "rating": "Rating",
+      "odds": "Odds",
+      "bet": "Taruh",
+      "popularity": "Favorit #{{rank}}",
+      "debut": "Debut",
+      "note": "* Rating dihitung dari hasil terakhir dan data latihan GitHub. Odds diperkirakan lewat simulasi. Rating hanya sedikit memengaruhi hasil.",
+      "clearHistory": "Reset riwayat ({{count}} balapan)",
+      "clearConfirm": "Hapus semua riwayat balapan?"
+    },
+    "github": {
+      "title": "Data latihan GitHub",
+      "description": "Tautkan username GitHub ke kuda untuk memasukkan aktivitas publik 14 hari terakhir (commit, PR, review, issue) sebagai nilai latihan. Hanya data publik, satu permintaan per pengguna (cache 1 jam).",
+      "placeholder": "Username GitHub",
+      "fetch": "Ambil data latihan",
+      "fetching": "Mengambil…",
+      "summary": "Commit {{commits}} / PR {{prs}} / Review {{reviews}} / Issue {{issues}}",
+      "status": {
+        "loading": "Mengambil…",
+        "notFound": "Pengguna tidak ditemukan",
+        "rateLimited": "Batas GitHub tercapai. Coba lagi nanti",
+        "network": "Gagal mengambil data",
+        "invalid": "Username tidak valid"
+      }
+    },
+    "bet": {
+      "pick": "Taruh menang untuk {{name}}",
+      "none": "Pilih satu kuda di kolom Taruh",
+      "current": "🎫 Taruhan menang: {{name}} ({{odds}}x)",
+      "hit": "🎉 Tepat! {{odds}}x (100 → {{payout}})",
+      "miss": "Meleset… pilihan Anda {{name}}"
+    },
+    "result": {
+      "title": "RESMI",
+      "rank": "#{{rank}}",
+      "odds": "{{odds}}x · Favorit #{{pop}}",
+      "winner": "🏆 Juara"
+    },
+    "vision": {
+      "title": "Roulette Stakes",
+      "result": "Hasil resmi"
+    },
+    "commentary": {
+      "gate": "Semua kuda sudah masuk gerbang…",
+      "start": "Balapan dimulai!",
+      "early": "{{name}} memimpin di awal!",
+      "takeLead": "{{name}} mengambil alih pimpinan!",
+      "halfway": "Setengah jalan: {{first}} memimpin, {{second}} kedua, {{third}} ketiga",
+      "stretch": "Masuk lintasan akhir! {{name}} di depan!",
+      "surge": "{{name}} melesat dari luar!",
+      "close": "{{first}} dan {{second}} berdampingan!",
+      "finish": "{{name}} menang!",
+      "photo": "Finis sangat tipis! Foto finis… pemenangnya {{name}}!"
+    }
   }
 }

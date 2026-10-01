@@ -1,7 +1,7 @@
 import { type FC } from "react";
 import { useTranslation } from "react-i18next";
 
-export type AppMode = "roulette" | "grouping" | "battle";
+export type AppMode = "roulette" | "grouping" | "battle" | "horseRace";
 
 interface ModeSwitcherProps {
   mode: AppMode;
@@ -41,6 +41,14 @@ export const ModeSwitcher: FC<ModeSwitcherProps> = ({
         disabled={disabled}
       >
         ⚔️ {t("mode.battle")}
+      </button>
+      <button
+        type="button"
+        className={`mode-switcher-tab ${mode === "horseRace" ? "active" : ""}`}
+        onClick={() => onChange("horseRace")}
+        disabled={disabled}
+      >
+        🏇 {t("mode.horseRace")}
       </button>
     </div>
   );

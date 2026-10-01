@@ -28,7 +28,8 @@
   "mode": {
     "roulette": "Roulette",
     "grouping": "Groups",
-    "battle": "Battle"
+    "battle": "Battle",
+    "horseRace": "Derby"
   },
   "grouping": {
     "groupCount": "Groups:",
@@ -70,5 +71,101 @@
     "clear": "Clear",
     "leading": "Leading",
     "go": "GO!"
+  },
+  "race": {
+    "distance": "Distance",
+    "distances": {
+      "sprint": "Sprint {{meters}}m",
+      "mile": "Mile {{meters}}m",
+      "long": "Long {{meters}}m"
+    },
+    "start": "And they're off!",
+    "reset": "Back to gate",
+    "loading": "Preparing the racecourse…",
+    "webglError": "Your browser does not support 3D graphics, so Derby mode can't be shown.",
+    "needTwo": "Add at least 2 horses to race",
+    "overflow": "Up to {{max}} horses can run ({{count}} scratched)",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "remaining": "{{meters}}m to go",
+    "goal": "Finish!",
+    "slowMotion": "SLOW",
+    "styles": {
+      "front": "Front",
+      "stalker": "Stalker",
+      "closer": "Closer",
+      "deep": "Late"
+    },
+    "card": {
+      "title": "Roulette Racing Form",
+      "raceName": "Main Race · Roulette Stakes (G1)",
+      "course": "Turf {{meters}}m",
+      "field": "{{count}} runners",
+      "headlines": {
+        "front": "Top pick: {{name}}, looking to lead all the way",
+        "stalker": "Top pick: {{name}}, set to pounce from a handy spot",
+        "closer": "Top pick: {{name}}, ready to swoop in the straight",
+        "deep": "Top pick: {{name}}, coming from last with a late charge"
+      },
+      "frame": "Gate",
+      "number": "No.",
+      "mark": "Pick",
+      "name": "Horse",
+      "style": "Style",
+      "form": "Last 5",
+      "training": "Work",
+      "rating": "Rating",
+      "odds": "Win",
+      "bet": "Bet",
+      "popularity": "Fav #{{rank}}",
+      "debut": "Debut",
+      "note": "* Rating is based on recent form and GitHub workout data. Odds are estimated by simulation. Ratings only slightly affect the outcome.",
+      "clearHistory": "Reset form ({{count}} races)",
+      "clearConfirm": "Delete all race history?"
+    },
+    "github": {
+      "title": "GitHub workout data",
+      "description": "Link a GitHub username to a horse to reflect their public activity over the last 14 days (commits, PRs, reviews, issues) as a workout grade. Public data only, one request per user (cached for 1 hour).",
+      "placeholder": "GitHub username",
+      "fetch": "Fetch workout data",
+      "fetching": "Fetching…",
+      "summary": "Commits {{commits}} / PRs {{prs}} / Reviews {{reviews}} / Issues {{issues}}",
+      "status": {
+        "loading": "Fetching…",
+        "notFound": "User not found",
+        "rateLimited": "GitHub rate limit reached. Please try again later",
+        "network": "Failed to fetch",
+        "invalid": "Invalid username"
+      }
+    },
+    "bet": {
+      "pick": "Bet to win on {{name}}",
+      "none": "Pick one horse to win from the Bet column",
+      "current": "🎫 Win bet: {{name}} ({{odds}}x)",
+      "hit": "🎉 Winner! {{odds}}x (100 → {{payout}})",
+      "miss": "No luck… you picked {{name}}"
+    },
+    "result": {
+      "title": "OFFICIAL",
+      "rank": "#{{rank}}",
+      "odds": "{{odds}}x · Fav #{{pop}}",
+      "winner": "🏆 Winner"
+    },
+    "vision": {
+      "title": "Roulette Stakes",
+      "result": "Official result"
+    },
+    "commentary": {
+      "gate": "All horses are in the gate…",
+      "start": "And they're off!",
+      "early": "{{name}} takes the early lead!",
+      "takeLead": "{{name}} hits the front!",
+      "halfway": "Halfway: {{first}} leads, {{second}} second, {{third}} third",
+      "stretch": "Into the home straight! {{name}} in front!",
+      "surge": "{{name}} is flying down the outside!",
+      "close": "{{first}} and {{second}}, neck and neck!",
+      "finish": "{{name}} wins it!",
+      "photo": "A blanket finish! Photo… and it's {{name}}!"
+    }
   }
 }

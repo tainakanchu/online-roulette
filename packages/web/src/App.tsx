@@ -5,6 +5,7 @@ import { RouletteResult } from "./components/RouletteResult";
 import { OptionEditor } from "./components/OptionEditor";
 import { ImageActions } from "./components/ImageActions";
 import { BattleMode } from "./components/BattleMode";
+import { HorseRaceMode } from "./components/horse-race/HorseRaceMode";
 import { useRouletteOptions } from "./hooks/useRouletteOptions";
 import { useRouletteAnimation } from "./hooks/useRouletteAnimation";
 import { useSnackbar } from "./hooks/useSnackbar";
@@ -35,6 +36,7 @@ import "./styles/components/LanguageSwitcher.css";
 import "./styles/components/GroupControls.css";
 import "./styles/components/GroupResult.css";
 import "./styles/components/BattleMode.css";
+import "./styles/components/HorseRace.css";
 // レスポンシブは全コンポーネントCSSの後に読み込む
 import "./styles/responsive.css";
 
@@ -42,7 +44,7 @@ const MODE_STORAGE_KEY = "roulette-mode";
 
 const readInitialMode = (): AppMode => {
   const stored = readLocalStorage(MODE_STORAGE_KEY);
-  if (stored === "grouping" || stored === "battle") return stored;
+  if (stored === "grouping" || stored === "battle" || stored === "horseRace") return stored;
   return "roulette";
 };
 
@@ -271,6 +273,14 @@ function App() {
 
         {mode === "battle" && (
           <BattleMode
+            options={options}
+            onFinish={handleBattleFinish}
+            onNotify={showSnackbar}
+          />
+        )}
+
+        {mode === "horseRace" && (
+          <HorseRaceMode
             options={options}
             onFinish={handleBattleFinish}
             onNotify={showSnackbar}
