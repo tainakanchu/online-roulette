@@ -3,14 +3,18 @@ import { createGroundTexture, createSignTexture, createTurfTexture } from "./tex
 
 // 競馬場の静的な背景（空・芝・ラチ・スタンド・観客・木々・ターフビジョン）
 
-export const TRACK_LENGTH = 260;
+/** ゴール線の x 座標（スタートは距離に応じて手前に伸びる） */
+export const FINISH_X = 260;
 export const TRACK_HALF_WIDTH = 13.5;
-const COURSE_START = -60;
-const COURSE_END = TRACK_LENGTH + 140;
+/** 1m あたりのワールド単位 */
+export const WORLD_PER_METER = 0.16;
+/** 最長距離（3600m）でもスタート地点まで芝とラチが続くようにする */
+const COURSE_START = FINISH_X - 3600 * WORLD_PER_METER - 70;
+const COURSE_END = FINISH_X + 140;
 
 export interface Environment {
   group: THREE.Group;
-  /** 観客の盛り上がり 0..1 */
+  /** 観客の盛り上がり 0..1（揺れは頂点シェーダーで計算するので CPU 負荷はほぼない） */
   update: (time: number, excitement: number) => void;
   visionTexture: THREE.CanvasTexture;
   visionCanvas: HTMLCanvasElement;
@@ -82,17 +86,17 @@ export const createEnvironment = (sunDirection: THREE.Vector3): Environment => {
     })
   );
   const sky = add(new THREE.SphereGeometry(1400, 32, 16), skyMat);
-  sky.position.set(TRACK_LENGTH / 2, 0, 0);
+  sky.position.set(FINISH_X / 2, 0, 0);
 
   // ----- 地面と芝コース -----
-  const groundTex = track(createGroundTexture([60, 40]));
+  const groundTex = track(createGroundTexture([75, 40]));
   const ground = add(
-    new THREE.PlaneGeometry(2400, 1600),
+    new THREE.PlaneGeometry(3000, 1600),
     track(new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.95 })),
     { receive: true }
   );
   ground.rotation.x = -Math.PI / 2;
-  ground.position.set(TRACK_LENGTH / 2, -0.02, 0);
+  ground.position.set(FINISH_X / 2 - 150, -0.02, 0);
 
   const courseLength = COURSE_END - COURSE_START;
   const turfTex = track(createTurfTexture("#3f8f2f", "#4ca238", [courseLength / 16, 1], 1));
@@ -137,8 +141,8 @@ export const createEnvironment = (sunDirection: THREE.Vector3): Environment => {
   disposables.push({ dispose: () => posts.dispose() });
 
   // ----- スタンド -----
-  const standStart = TRACK_LENGTH - 130;
-  const standEnd = TRACK_LENGTH + 60;
+  const standStart = FINISH_X - 130;
+  const standEnd = FINISH_X + 60;
   const standLength = standEnd - standStart;
   const standCenter = (standStart + standEnd) / 2;
   const concrete = track(new THREE.MeshStandardMaterial({ color: "#c9c4bb", roughness: 0.9 }));
@@ -198,14 +202,26 @@ export const createEnvironment = (sunDirection: THREE.Vector3): Environment => {
   );
   sign.position.set(standCenter, rows * rowRise + 10.2, standFront + 2.2);
 
-  // ----- 観客（InstancedMesh） -----
+  // ----- 観客（InstancedMesh、揺れは頂点シェーダー） -----
   const personGeo = track(new THREE.CapsuleGeometry(0.17, 0.42, 3, 6));
   const crowdMat = track(new THREE.MeshStandardMaterial({ roughness: 0.8 }));
+  const crowdUniforms = { uTime: { value: 0 }, uAmp: { value: 0.04 } };
+  crowdMat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = crowdUniforms.uTime;
+    shader.uniforms.uAmp = crowdUniforms.uAmp;
+    shader.vertexShader =
+      "attribute float aPhase;\nattribute float aEnergy;\nuniform float uTime;\nuniform float uAmp;\n" +
+      shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\n  transformed.y += max(0.0, sin(uTime * (3.0 + aEnergy * 3.0) + aPhase)) * uAmp * aEnergy;"
+      );
+  };
   const spacing = 0.62;
   const perRow = Math.floor(standLength / spacing);
   const crowdCount = perRow * rows;
   const crowd = new THREE.InstancedMesh(personGeo, crowdMat, crowdCount);
-  const crowdBase: Array<{ x: number; y: number; z: number; phase: number; energy: number }> = [];
+  const phases = new Float32Array(crowdCount);
+  const energies = new Float32Array(crowdCount);
   const palette = ["#e53935", "#1e88e5", "#fdd835", "#43a047", "#fb8c00", "#8e24aa", "#ffffff", "#212121", "#f06292", "#26c6da"];
   const color = new THREE.Color();
   let ci = 0;
@@ -215,14 +231,16 @@ export const createEnvironment = (sunDirection: THREE.Vector3): Environment => {
       const x = standStart + i * spacing + (Math.random() - 0.5) * 0.25;
       const y = filled ? rowRise * (r + 1) + 0.38 : -10;
       const z = standFront - r * rowDepth - 0.1;
-      crowdBase.push({ x, y, z, phase: Math.random() * Math.PI * 2, energy: 0.5 + Math.random() });
+      phases[ci] = Math.random() * Math.PI * 2;
+      energies[ci] = 0.5 + Math.random();
       m4.makeTranslation(x, y, z);
       crowd.setMatrixAt(ci, m4);
       crowd.setColorAt(ci, color.set(palette[Math.floor(Math.random() * palette.length)]));
       ci += 1;
     }
   }
-  crowd.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  personGeo.setAttribute("aPhase", new THREE.InstancedBufferAttribute(phases, 1));
+  personGeo.setAttribute("aEnergy", new THREE.InstancedBufferAttribute(energies, 1));
   group.add(crowd);
   disposables.push({ dispose: () => crowd.dispose() });
 
@@ -232,7 +250,7 @@ export const createEnvironment = (sunDirection: THREE.Vector3): Environment => {
   const trunkMat = track(new THREE.MeshStandardMaterial({ color: "#5b3a23", roughness: 1 }));
   // 色はインスタンスごとに setColorAt で与える（マテリアル色と乗算されるので白にしておく）
   const leafMat = track(new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.9, flatShading: true }));
-  const treeCount = 260;
+  const treeCount = 380;
   const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
   const leaves = new THREE.InstancedMesh(leafGeo, leafMat, treeCount);
   leaves.castShadow = true;
@@ -242,7 +260,9 @@ export const createEnvironment = (sunDirection: THREE.Vector3): Environment => {
   for (let i = 0; i < treeCount; i += 1) {
     // 内馬場の奥と、コースの両端
     const far = i < treeCount * 0.75;
-    const x = far ? -150 + Math.random() * (TRACK_LENGTH + 400) : (Math.random() < 0.5 ? -110 : TRACK_LENGTH + 170) + (Math.random() - 0.5) * 60;
+    const x = far
+      ? COURSE_START - 90 + Math.random() * (COURSE_END - COURSE_START + 200)
+      : (Math.random() < 0.5 ? COURSE_START - 50 : FINISH_X + 170) + (Math.random() - 0.5) * 60;
     const z = far ? TRACK_HALF_WIDTH + 55 + Math.random() * 90 : (Math.random() - 0.5) * 160;
     const s = 0.8 + Math.random() * 1.1;
     scaleV.set(s, s, s);
@@ -270,7 +290,7 @@ export const createEnvironment = (sunDirection: THREE.Vector3): Environment => {
   );
   pond.rotation.x = -Math.PI / 2;
   pond.scale.set(55, 16, 1);
-  pond.position.set(TRACK_LENGTH * 0.45, 0.02, TRACK_HALF_WIDTH + 34);
+  pond.position.set(FINISH_X * 0.45, 0.02, TRACK_HALF_WIDTH + 34);
 
   // ----- ターフビジョン -----
   const visionCanvas = document.createElement("canvas");
@@ -282,30 +302,22 @@ export const createEnvironment = (sunDirection: THREE.Vector3): Environment => {
     new THREE.MeshBasicMaterial({ map: visionTexture, toneMapped: false })
   );
   const vision = add(new THREE.PlaneGeometry(36, 14), visionMat);
-  vision.position.set(TRACK_LENGTH - 50, 12, TRACK_HALF_WIDTH + 26);
+  vision.position.set(FINISH_X - 50, 12, TRACK_HALF_WIDTH + 26);
   vision.rotation.y = Math.PI;
   const frame = add(
     new THREE.BoxGeometry(38, 16, 1),
     track(new THREE.MeshStandardMaterial({ color: "#1b1b1f", roughness: 0.4 })),
     { cast: true }
   );
-  frame.position.set(TRACK_LENGTH - 50, 12, TRACK_HALF_WIDTH + 26.6);
+  frame.position.set(FINISH_X - 50, 12, TRACK_HALF_WIDTH + 26.6);
   for (const dx of [-12, 12]) {
     const leg = add(new THREE.BoxGeometry(1.2, 6, 1.2), concrete, { cast: true });
-    leg.position.set(TRACK_LENGTH - 50 + dx, 3, TRACK_HALF_WIDTH + 26.6);
+    leg.position.set(FINISH_X - 50 + dx, 3, TRACK_HALF_WIDTH + 26.6);
   }
 
   const update = (time: number, excitement: number) => {
-    // 観客は興奮度に応じて跳ねる（負荷を抑えるため 2 フレームに 1 回）
-    const amp = 0.04 + excitement * 0.32;
-    for (let i = 0; i < crowdBase.length; i += 1) {
-      const c = crowdBase[i];
-      if (c.y < 0) continue;
-      const bounce = Math.max(0, Math.sin(time * (3 + c.energy * 3) + c.phase)) * amp * c.energy;
-      m4.makeTranslation(c.x, c.y + bounce, c.z);
-      crowd.setMatrixAt(i, m4);
-    }
-    crowd.instanceMatrix.needsUpdate = true;
+    crowdUniforms.uTime.value = time;
+    crowdUniforms.uAmp.value = 0.04 + excitement * 0.32;
   };
 
   return {

@@ -74,10 +74,13 @@
   },
   "race": {
     "distance": "Jarak",
-    "distances": {
-      "sprint": "Pendek {{meters}}m",
-      "mile": "Mil {{meters}}m",
-      "long": "Jauh {{meters}}m"
+    "meters": "{{meters}}m",
+    "categories": {
+      "sprint": "Pendek",
+      "mile": "Mil",
+      "intermediate": "Menengah",
+      "long": "Jauh",
+      "extended": "Sangat jauh"
     },
     "start": "Mulai!",
     "reset": "Kembali ke gerbang",
@@ -99,7 +102,7 @@
     "card": {
       "title": "Koran Pacuan Roulette",
       "raceName": "Balapan Utama · Roulette Stakes (G1)",
-      "course": "Rumput {{meters}}m",
+      "course": "Rumput {{meters}}m ({{category}})",
       "field": "{{count}} kuda",
       "headlines": {
         "front": "Jagoan kami: {{name}}, berlari di depan sampai finis",

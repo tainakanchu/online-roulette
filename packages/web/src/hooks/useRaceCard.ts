@@ -2,8 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import {
   COLORS,
   MAX_HORSES,
-  RACE_DISTANCES,
   activityScore,
+  clampDistance,
   computeRating,
   estimateWinProbabilities,
   formScore,
@@ -11,12 +11,12 @@ import {
   nameHash,
   oddsFromProbability,
   popularityRanks,
+  raceTarget,
   recentFinishes,
   runningStyleFor,
   strengthFromRating,
   type Finish,
   type GitHubActivity,
-  type RaceDistanceId,
   type RaceRecord,
   type RunningStyle,
 } from "@tainakanchu/roulette-core";
@@ -62,7 +62,7 @@ export interface RaceEntry {
 
 /** 出走表（競馬新聞）に必要なデータをまとめて管理する */
 export const useRaceCard = (options: string[]) => {
-  const [distance, setDistanceState] = useState<RaceDistanceId>(loadDistance);
+  const [distance, setDistanceState] = useState<number>(loadDistance);
   const [history, setHistory] = useState<RaceRecord[]>(loadRaceHistory);
   const [logins, setLogins] = useState<Record<string, string>>(loadGitHubLogins);
   const [activityCache, setActivityCache] =
@@ -71,7 +71,8 @@ export const useRaceCard = (options: string[]) => {
 
   const names = useMemo(() => options.slice(0, MAX_HORSES), [options]);
 
-  const setDistance = useCallback((value: RaceDistanceId) => {
+  const setDistance = useCallback((meters: number) => {
+    const value = clampDistance(meters);
     setDistanceState(value);
     saveDistance(value);
   }, []);
@@ -103,7 +104,7 @@ export const useRaceCard = (options: string[]) => {
     [names, history, logins, activityCache]
   );
 
-  const target = RACE_DISTANCES[distance].target;
+  const target = raceTarget(distance);
   const strengthKey = base.map((b) => `${b.strength}:${b.style}`).join("|");
   const probabilities = useMemo(
     () =>
@@ -111,7 +112,7 @@ export const useRaceCard = (options: string[]) => {
         base.map((b) => b.strength),
         base.map((b) => b.style),
         target,
-        base.length > 10 ? 700 : 1200
+        base.length > 10 ? 500 : 900
       ),
     // 能力値・脚質・距離が変わったときだけ再計算する（重い）
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -74,10 +74,13 @@
   },
   "race": {
     "distance": "距離",
-    "distances": {
-      "sprint": "短距離 {{meters}}m",
-      "mile": "マイル {{meters}}m",
-      "long": "長距離 {{meters}}m"
+    "meters": "{{meters}}m",
+    "categories": {
+      "sprint": "短距離",
+      "mile": "マイル",
+      "intermediate": "中距離",
+      "long": "長距離",
+      "extended": "超長距離"
     },
     "start": "出走！",
     "reset": "ゲートに戻す",
@@ -99,7 +102,7 @@
     "card": {
       "title": "ルーレット競馬新聞",
       "raceName": "メインレース ルーレット記念 (G1)",
-      "course": "芝 {{meters}}m",
+      "course": "芝 {{meters}}m（{{category}}）",
       "field": "{{count}}頭立て",
       "headlines": {
         "front": "{{name}}が本紙◎。ハナを切って逃げ切りを狙う",

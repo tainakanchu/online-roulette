@@ -74,10 +74,13 @@
   },
   "race": {
     "distance": "Distance",
-    "distances": {
-      "sprint": "Sprint {{meters}}m",
-      "mile": "Mile {{meters}}m",
-      "long": "Long {{meters}}m"
+    "meters": "{{meters}}m",
+    "categories": {
+      "sprint": "Sprint",
+      "mile": "Mile",
+      "intermediate": "Intermediate",
+      "long": "Long",
+      "extended": "Extended"
     },
     "start": "And they're off!",
     "reset": "Back to gate",
@@ -99,7 +102,7 @@
     "card": {
       "title": "Roulette Racing Form",
       "raceName": "Main Race · Roulette Stakes (G1)",
-      "course": "Turf {{meters}}m",
+      "course": "Turf {{meters}}m ({{category}})",
       "field": "{{count}} runners",
       "headlines": {
         "front": "Top pick: {{name}}, looking to lead all the way",

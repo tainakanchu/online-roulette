@@ -1,10 +1,6 @@
-import { type FC, useState } from "react";
+import { type FC, memo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  activityScore,
-  RACE_DISTANCES,
-  type RaceDistanceId,
-} from "@tainakanchu/roulette-core";
+import { activityScore, distanceCategory } from "@tainakanchu/roulette-core";
 import type { GitHubStatus, RaceEntry } from "../../hooks/useRaceCard";
 import { frameNumber } from "../../utils/raceFrame";
 
@@ -32,19 +28,21 @@ const trainingGrade = (entry: RaceEntry): string | null => {
 
 interface RaceCardProps {
   entries: RaceEntry[];
-  distance: RaceDistanceId;
+  /** 距離（m） */
+  distance: number;
   bet: number | null;
   onBet: (index: number | null) => void;
   locked: boolean;
   logins: Record<string, string>;
   onLoginChange: (name: string, login: string) => void;
   githubStatus: Record<string, GitHubStatus>;
-  onFetchGitHub: () => void;
+  onFetchGitHub: () => void | Promise<void>;
   raceCount: number;
   onClearHistory: () => void;
 }
 
-export const RaceCard: FC<RaceCardProps> = ({
+// レース中は実況・位置順の更新で親が頻繁に再描画されるので、出走表はメモ化しておく
+export const RaceCard: FC<RaceCardProps> = memo(function RaceCard({
   entries,
   distance,
   bet,
@@ -56,12 +54,12 @@ export const RaceCard: FC<RaceCardProps> = ({
   onFetchGitHub,
   raceCount,
   onClearHistory,
-}) => {
+}) {
   const { t } = useTranslation();
   const [showGitHub, setShowGitHub] = useState(false);
   const favorite = entries.find((e) => e.mark === "◎");
   const fieldSize = entries.length;
-  const meters = RACE_DISTANCES[distance].meters;
+  const category = t(`race.categories.${distanceCategory(distance)}`);
   const loadingAny = Object.values(githubStatus).includes("loading");
 
   return (
@@ -71,7 +69,7 @@ export const RaceCard: FC<RaceCardProps> = ({
         <div className="race-card-masthead-meta">
           <span>{t("race.card.raceName")}</span>
           <span>
-            {t("race.card.course", { meters })} · {t("race.card.field", { count: fieldSize })}
+            {t("race.card.course", { meters: distance, category })} · {t("race.card.field", { count: fieldSize })}
           </span>
         </div>
       </header>
@@ -253,7 +251,7 @@ export const RaceCard: FC<RaceCardProps> = ({
           <button
             type="button"
             className="race-github-fetch"
-            onClick={onFetchGitHub}
+            onClick={() => void onFetchGitHub()}
             disabled={locked || loadingAny}
           >
             {loadingAny ? t("race.github.fetching") : t("race.github.fetch")}
@@ -262,4 +260,4 @@ export const RaceCard: FC<RaceCardProps> = ({
       )}
     </section>
   );
-};
+});

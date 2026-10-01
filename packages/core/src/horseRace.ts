@@ -1,26 +1,51 @@
 import { cryptoRandom } from "./roulette";
 
 // ===== 競馬モードのロジック =====
-// 抽選で当たった馬が 1 歩進み、最初に target 歩に到達した馬が勝ち。
+// 抽選で当たった馬がスピードを得て前に出て、最初にゴールした馬が勝ち。
+// 当たりは「位置」ではなく「スピード」に効かせるので、動きはなめらかになる。
 // 能力値（近走成績 + GitHub の調教データ）で当たりやすさを「少しだけ」重みづけする。
 
-export type RaceDistanceId = "sprint" | "mile" | "long";
+// ----- 距離 -----
 
-export interface RaceDistance {
-  id: RaceDistanceId;
-  meters: number;
-  /** ゴールまでに必要な歩数（大きいほど実力が結果に出やすい） */
-  target: number;
-}
+export const MIN_DISTANCE = 1000;
+export const MAX_DISTANCE = 3600;
+export const DISTANCE_STEP = 100;
+export const DEFAULT_DISTANCE = 1600;
+/** よく使う距離（ワンタップで選べる） */
+export const DISTANCE_PRESETS = [1200, 1600, 2000, 2400, 3000, 3200] as const;
 
-export const RACE_DISTANCES: Record<RaceDistanceId, RaceDistance> = {
-  sprint: { id: "sprint", meters: 1200, target: 24 },
-  mile: { id: "mile", meters: 1600, target: 36 },
-  long: { id: "long", meters: 2400, target: 54 },
+/** 距離区分（SMILE 区分） */
+export type DistanceCategory = "sprint" | "mile" | "intermediate" | "long" | "extended";
+
+export const distanceCategory = (meters: number): DistanceCategory => {
+  if (meters <= 1300) return "sprint";
+  if (meters < 1900) return "mile";
+  if (meters <= 2100) return "intermediate";
+  if (meters <= 2700) return "long";
+  return "extended";
 };
 
-export const isRaceDistanceId = (value: unknown): value is RaceDistanceId =>
-  value === "sprint" || value === "mile" || value === "long";
+export const clampDistance = (meters: number): number => {
+  const stepped = Math.round(meters / DISTANCE_STEP) * DISTANCE_STEP;
+  return Math.min(MAX_DISTANCE, Math.max(MIN_DISTANCE, stepped));
+};
+
+// 旧バージョン（3 択）で保存された距離 ID
+const LEGACY_DISTANCES: Record<string, number> = { sprint: 1200, mile: 1600, long: 2400 };
+
+/** 保存値などから距離（m）を読み取る。読めなければ null */
+export const parseDistance = (value: unknown): number | null => {
+  if (typeof value === "string" && value in LEGACY_DISTANCES) return LEGACY_DISTANCES[value];
+  const num = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(num) || num <= 0) return null;
+  return clampDistance(num);
+};
+
+/**
+ * ゴールまでの距離（レース内部の単位）。1 単位 ≒ 1 頭あたりの平均当選 1 回分。
+ * 長いほど抽選回数が増え、実力が結果に出やすくなる。
+ */
+export const raceTarget = (meters: number): number => (meters * 36) / 1600;
 
 export const MAX_HORSES = 18;
 
@@ -29,7 +54,8 @@ export type RunningStyle = "front" | "stalker" | "closer" | "deep";
 
 export interface RaceRecord {
   timestamp: number;
-  distance: RaceDistanceId;
+  /** 距離（m） */
+  distance: number;
   /** 着順（1着から順に馬名） */
   order: string[];
 }
@@ -213,7 +239,7 @@ const STYLE_SLOPES: Record<RunningStyle, number> = {
  * 勝ち負けは終盤の伸びで決まりやすいので、倍率が 1 になる点を中盤やや後ろに置くと
  * どの脚質もほぼ同じ勝率になる（シミュレーションで調整済み）。
  */
-const STYLE_PIVOT = 0.55;
+const STYLE_PIVOT = 0.57;
 
 /**
  * レース展開（phase: 0=スタート, 1=ゴール）に応じた脚質ごとの倍率。
@@ -226,6 +252,15 @@ export const styleMultiplier = (style: RunningStyle, phase: number): number => {
 
 // ----- レース本体 -----
 
+/** 1 単位時間あたりの刻み数 */
+const SUBSTEPS = 6;
+/** 当たり → 勢い の時定数（単位時間） */
+const RATE_TAU = 2.5;
+/** 勢い → スピード の時定数（単位時間）。2 段にしてスピードの変化をなめらかにする */
+const SPEED_TAU = 2.5;
+const STYLE_LOOKAHEAD = 5;
+const STYLE_REFERENCE_TARGET = 36;
+
 export interface RaceSimulationInput {
   strengths: number[];
   styles: RunningStyle[];
@@ -234,90 +269,132 @@ export interface RaceSimulationInput {
 }
 
 export interface RaceSimulation {
-  /** 抽選で前進した馬の index の列（最後の要素が勝ち馬） */
-  picks: number[];
+  target: number;
+  /** samples の時間間隔（単位時間） */
+  dt: number;
+  /** 馬ごとの位置の時系列（index k は時刻 k * dt） */
+  samples: number[][];
+  /** 馬ごとのゴール時刻（補間済み）。ゴールしていなければ Infinity */
+  finishTimes: number[];
   winner: number;
   /** 着順（馬 index） */
   order: number[];
-  /** 勝ち馬ゴール時点の各馬の歩数 */
-  finalProgress: number[];
-  target: number;
 }
 
-const pickWeighted = (weights: number[], random: () => number): number => {
-  let total = 0;
-  for (const w of weights) total += w;
-  let r = random() * total;
-  for (let i = 0; i < weights.length; i += 1) {
-    r -= weights[i];
-    if (r < 0) return i;
-  }
-  return weights.length - 1;
-};
-
-export const simulateHorseRace = ({
-  strengths,
-  styles,
-  target,
-  random = cryptoRandom,
-}: RaceSimulationInput): RaceSimulation => {
+const runRace = (
+  { strengths, styles, target, random = cryptoRandom }: RaceSimulationInput,
+  record: boolean
+): RaceSimulation => {
   const n = strengths.length;
-  const progress = new Array<number>(n).fill(0);
-  const picks: number[] = [];
+  const dt = 1 / SUBSTEPS;
+  const finishTimes = new Array<number>(n).fill(Infinity);
+  const samples: number[][] = record ? strengths.map(() => [0]) : [];
   if (n === 0 || target <= 0) {
-    return { picks, winner: -1, order: [], finalProgress: progress, target };
+    return { target, dt, samples, finishTimes, winner: -1, order: [] };
   }
 
-  let leader = 0;
-  let winner = -1;
+  const pos = new Array<number>(n).fill(0);
+  const rate = new Array<number>(n).fill(0);
+  const speed = new Array<number>(n).fill(0);
   const weights = new Array<number>(n);
-  // 安全弁（理論上 n * target 回以内に必ず決着する）
-  const maxDraws = n * target;
-  for (let draw = 0; draw < maxDraws; draw += 1) {
-    const phase = leader / target;
+  // 距離が長いほど脚質の差が積み重なるので、効き目を距離で割り引いて距離による有利不利をなくす
+  const styleScale = Math.sqrt(STYLE_REFERENCE_TARGET / target);
+  let leader = 0;
+  let finished = 0;
+  let firstFinish = Infinity;
+  let t = 0;
+  // 安全弁（通常は target + 十数単位で決着する）
+  const maxTime = target * 4 + 40;
+
+  while (t < maxTime) {
+    // スピードは当たりから遅れて効くので、その分だけ先の展開を見て脚質の倍率を決める
+    const phase = Math.min(1, (leader + STYLE_LOOKAHEAD) / target);
+    let sum = 0;
     for (let i = 0; i < n; i += 1) {
-      weights[i] = strengths[i] * styleMultiplier(styles[i] ?? "stalker", phase);
+      weights[i] =
+        strengths[i] * (1 + (styleMultiplier(styles[i] ?? "stalker", phase) - 1) * styleScale);
+      sum += weights[i];
     }
-    const pick = pickWeighted(weights, random);
-    progress[pick] += 1;
-    picks.push(pick);
-    if (progress[pick] > leader) leader = progress[pick];
-    if (progress[pick] >= target) {
-      winner = pick;
-      break;
+    const mean = sum / n;
+    t += dt;
+    for (let i = 0; i < n; i += 1) {
+      // 1 単位時間に平均 1 回（強い馬ほど少し多く）当たる
+      const hit = random() < (weights[i] / mean) * dt ? 1 : 0;
+      rate[i] += hit / RATE_TAU - (rate[i] * dt) / RATE_TAU;
+      speed[i] += ((rate[i] - speed[i]) * dt) / SPEED_TAU;
+      const prev = pos[i];
+      pos[i] = prev + speed[i] * dt;
+      if (pos[i] > leader) leader = pos[i];
+      if (finishTimes[i] === Infinity && pos[i] >= target) {
+        finishTimes[i] = t - dt + ((target - prev) / (pos[i] - prev)) * dt;
+        finished += 1;
+        if (finishTimes[i] < firstFinish) firstFinish = finishTimes[i];
+      }
+      if (record) samples[i].push(pos[i]);
     }
+    // オッズ計算用は勝ち馬が決まった時点で打ち切る
+    if (!record && finished > 0) break;
+    // 描画用は全馬がゴールするまで（大差の最後方は打ち切って位置で着順を決める）
+    if (record && (finished === n || t > firstFinish * 1.6 + 10)) break;
   }
 
-  // 2 着以下は勝ち馬ゴール時点の位置（描画と同じ progressAt）順
-  const tracks = buildPickTracks({ picks }, n);
-  const at = progress.map((_, i) => progressAt(tracks[i], picks.length, picks.length));
-  const order = progress
+  const order = pos
     .map((_, i) => i)
-    .filter((i) => i !== winner)
-    .sort((a, b) => at[b] - at[a] || a - b);
-
-  return {
-    picks,
-    winner,
-    order: [winner, ...order],
-    finalProgress: progress,
-    target,
-  };
+    .sort((a, b) => finishTimes[a] - finishTimes[b] || pos[b] - pos[a] || a - b);
+  const winner = finishTimes[order[0]] === Infinity ? -1 : order[0];
+  return { target, dt, samples, finishTimes, winner, order };
 };
+
+export const simulateHorseRace = (input: RaceSimulationInput): RaceSimulation =>
+  runRace(input, true);
+
+/**
+ * 時刻 t（単位時間）における馬の位置。
+ * サンプル間は Catmull-Rom で補間し、スピードが刻みの継ぎ目で段にならないようにする。
+ * 記録の終わり以降は最後の速度で進み続ける。
+ */
+export const positionAt = (race: RaceSimulation, horse: number, t: number): number => {
+  const s = race.samples[horse];
+  if (!s || s.length === 0) return 0;
+  if (t <= 0) return s[0];
+  const f = t / race.dt;
+  const i = Math.floor(f);
+  const last = s.length - 1;
+  if (i >= last) {
+    const v = last > 0 ? (s[last] - s[last - 1]) / race.dt : 0;
+    return s[last] + v * (t - last * race.dt);
+  }
+  const p1 = s[i];
+  const p2 = s[i + 1];
+  const p0 = i > 0 ? s[i - 1] : 2 * p1 - p2;
+  const p3 = i + 2 <= last ? s[i + 2] : 2 * p2 - p1;
+  const u = f - i;
+  const m1 = (p2 - p0) / 2;
+  const m2 = (p3 - p1) / 2;
+  const u2 = u * u;
+  const u3 = u2 * u;
+  return (
+    (2 * u3 - 3 * u2 + 1) * p1 + (u3 - 2 * u2 + u) * m1 + (-2 * u3 + 3 * u2) * p2 + (u3 - u2) * m2
+  );
+};
+
+/** 勝ち馬がゴールした時刻 */
+export const winnerTime = (race: RaceSimulation): number =>
+  race.winner >= 0 ? race.finishTimes[race.winner] : 0;
 
 /** モンテカルロで各馬の勝率を見積もる（オッズ・印に使う） */
 export const estimateWinProbabilities = (
   strengths: number[],
   styles: RunningStyle[],
   target: number,
-  trials = 1500,
+  trials = 1000,
   random: () => number = Math.random
 ): number[] => {
   const n = strengths.length;
   if (n === 0) return [];
   const wins = new Array<number>(n).fill(0.5); // 0 勝でもオッズが無限にならないよう補正
-  for (let t = 0; t < trials; t += 1) {
-    const { winner } = simulateHorseRace({ strengths, styles, target, random });
+  for (let k = 0; k < trials; k += 1) {
+    const { winner } = runRace({ strengths, styles, target, random }, false);
     if (winner >= 0) wins[winner] += 1;
   }
   const total = wins.reduce((a, b) => a + b, 0);
@@ -357,49 +434,4 @@ export const popularityRanks = (probabilities: number[]): number[] => {
     ranks[i] = rank + 1;
   });
   return ranks;
-};
-
-// ----- 描画用: 抽選列 → 滑らかな位置 -----
-
-/** 馬ごとに「何回目の抽選で前進したか」の列を作る */
-export const buildPickTracks = (
-  race: Pick<RaceSimulation, "picks">,
-  horseCount: number
-): number[][] => {
-  const tracks: number[][] = Array.from({ length: horseCount }, () => []);
-  race.picks.forEach((horse, drawIndex) => {
-    tracks[horse]?.push(drawIndex + 1);
-  });
-  return tracks;
-};
-
-/**
- * 抽選の進行度 x（0..totalDraws、小数可。超えても可）における馬の歩数を滑らかに返す。
- * 前進と前進の間を線形補間する。勝ち馬のゴール時点で次の前進がない馬は、
- * 平均ペースから「次に前進するはずだった時刻」を仮置きして、ゴール後も走り続けさせる
- * （ゴール前に勝ち馬を追い越すことはない）。
- */
-export const progressAt = (track: number[], x: number, totalDraws: number): number => {
-  if (x <= 0) return 0;
-  // 二分探索で x 以下の前進回数を数える
-  let lo = 0;
-  let hi = track.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (track[mid] <= x) lo = mid + 1;
-    else hi = mid;
-  }
-  const done = lo;
-  const prevTime = done === 0 ? 0 : track[done - 1];
-  if (done < track.length) {
-    const nextTime = track[done];
-    return done + (x - prevTime) / (nextTime - prevTime);
-  }
-  const total = Math.max(1, totalDraws);
-  const pace = Math.max(track.length, 0.5) / total;
-  const virtualNext = Math.max(total, prevTime) + 1 / pace;
-  if (x <= virtualNext) {
-    return done + (x - prevTime) / (virtualNext - prevTime);
-  }
-  return done + 1 + (x - virtualNext) * pace;
 };

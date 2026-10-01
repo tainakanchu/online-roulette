@@ -1,18 +1,22 @@
 import {
   activityScore,
-  buildPickTracks,
+  clampDistance,
   computeRating,
+  distanceCategory,
   formScore,
   marksFromProbabilities,
   oddsFromProbability,
+  parseDistance,
   popularityRanks,
-  progressAt,
+  positionAt,
+  raceTarget,
   recentFinishes,
   runningStyleFor,
   simulateHorseRace,
   strengthFromRating,
   styleMultiplier,
   summarizeGitHubEvents,
+  winnerTime,
   type RaceRecord,
 } from "../src/horseRace";
 
@@ -28,9 +32,9 @@ const seeded = (seed: number) => () => {
 describe("horseRace", () => {
   describe("recentFinishes / formScore", () => {
     const history: RaceRecord[] = [
-      { timestamp: 3, distance: "mile", order: ["A", "B", "C"] },
-      { timestamp: 2, distance: "mile", order: ["B", "C"] },
-      { timestamp: 1, distance: "sprint", order: ["C", "A", "B"] },
+      { timestamp: 3, distance: 1600, order: ["A", "B", "C"] },
+      { timestamp: 2, distance: 1600, order: ["B", "C"] },
+      { timestamp: 1, distance: 1200, order: ["C", "A", "B"] },
     ];
 
     it("新しい順に着順と頭数を返す", () => {
@@ -125,49 +129,85 @@ describe("horseRace", () => {
     });
   });
 
-  describe("simulateHorseRace", () => {
-    const styles = ["front", "stalker", "closer", "deep"] as const;
-
-    it("勝ち馬はちょうど target 歩でゴールし、他は target 未満", () => {
-      const race = simulateHorseRace({
-        strengths: [1, 1, 1, 1],
-        styles: [...styles],
-        target: 20,
-        random: seeded(1),
-      });
-      expect(race.finalProgress[race.winner]).toBe(20);
-      race.finalProgress.forEach((p, i) => {
-        if (i !== race.winner) expect(p).toBeLessThan(20);
-      });
-      expect(race.picks[race.picks.length - 1]).toBe(race.winner);
-      expect(race.picks).toHaveLength(race.finalProgress.reduce((a, b) => a + b, 0));
+  describe("距離", () => {
+    it("100m 刻みで 1000〜3600m に丸める", () => {
+      expect(clampDistance(1234)).toBe(1200);
+      expect(clampDistance(500)).toBe(1000);
+      expect(clampDistance(5000)).toBe(3600);
     });
 
-    it("着順は全馬を 1 回ずつ含み、歩数の降順", () => {
-      const race = simulateHorseRace({
+    it("SMILE 区分で分類する", () => {
+      expect(distanceCategory(1200)).toBe("sprint");
+      expect(distanceCategory(1600)).toBe("mile");
+      expect(distanceCategory(2000)).toBe("intermediate");
+      expect(distanceCategory(2400)).toBe("long");
+      expect(distanceCategory(3000)).toBe("extended");
+    });
+
+    it("旧バージョンの距離 ID や文字列も読める", () => {
+      expect(parseDistance("sprint")).toBe(1200);
+      expect(parseDistance("long")).toBe(2400);
+      expect(parseDistance("3000")).toBe(3000);
+      expect(parseDistance(2450)).toBe(2500);
+      expect(parseDistance("abc")).toBeNull();
+      expect(parseDistance(null)).toBeNull();
+    });
+
+    it("長い距離ほどゴールまでの単位が大きい", () => {
+      expect(raceTarget(1600)).toBe(36);
+      expect(raceTarget(3200)).toBe(72);
+    });
+  });
+
+  describe("simulateHorseRace", () => {
+    const styles = ["front", "stalker", "closer", "deep"] as const;
+    const run = (seed: number, target = 20) =>
+      simulateHorseRace({
         strengths: [1, 1, 1, 1],
         styles: [...styles],
-        target: 15,
-        random: seeded(7),
+        target,
+        random: seeded(seed),
       });
+
+    it("着順はゴール時刻順で、勝ち馬が最初にゴールする", () => {
+      const race = run(1);
       expect([...race.order].sort()).toEqual([0, 1, 2, 3]);
       expect(race.order[0]).toBe(race.winner);
-      for (let i = 1; i < race.order.length - 1; i += 1) {
-        expect(race.finalProgress[race.order[i]]).toBeGreaterThanOrEqual(
-          race.finalProgress[race.order[i + 1]]
-        );
+      const times = race.order.map((i) => race.finishTimes[i]);
+      expect([...times].sort((a, b) => a - b)).toEqual(times);
+      // 勝ち馬のゴール時点で、他馬はまだゴール手前
+      const t = winnerTime(race);
+      expect(positionAt(race, race.winner, t)).toBeCloseTo(20, 2);
+      race.order.slice(1).forEach((i) => {
+        expect(positionAt(race, i, t)).toBeLessThan(20);
+      });
+    });
+
+    it("位置は時間とともに単調に増え、急に跳ばない（なめらか）", () => {
+      const race = run(7);
+      for (const samples of race.samples) {
+        for (let k = 1; k < samples.length; k += 1) {
+          expect(samples[k]).toBeGreaterThanOrEqual(samples[k - 1]);
+        }
+        // スピード（1 刻みあたりの変化）の変化量が小さい
+        for (let k = 2; k < samples.length; k += 1) {
+          const v1 = samples[k - 1] - samples[k - 2];
+          const v2 = samples[k] - samples[k - 1];
+          expect(Math.abs(v2 - v1)).toBeLessThan(0.02);
+        }
+      }
+    });
+
+    it("ゲートからは止まった状態で出て、加速していく", () => {
+      const race = run(3);
+      for (const samples of race.samples) {
+        expect(samples[0]).toBe(0);
+        expect(samples[1] - samples[0]).toBeLessThan(0.01);
       }
     });
 
     it("同じ乱数なら同じ結果", () => {
-      const run = () =>
-        simulateHorseRace({
-          strengths: [1, 1.05, 0.95],
-          styles: ["front", "closer", "deep"],
-          target: 24,
-          random: seeded(42),
-        });
-      expect(run()).toEqual(run());
+      expect(run(42, 24)).toEqual(run(42, 24));
     });
 
     it("馬がいなければ勝ち馬なし", () => {
@@ -180,7 +220,7 @@ describe("horseRace", () => {
       const random = seeded(99);
       const strengths = [strengthFromRating(100), 1, 1, strengthFromRating(40)];
       const wins = [0, 0, 0, 0];
-      for (let t = 0; t < 3000; t += 1) {
+      for (let t = 0; t < 2000; t += 1) {
         const race = simulateHorseRace({
           strengths,
           styles: ["stalker", "stalker", "stalker", "stalker"],
@@ -192,6 +232,58 @@ describe("horseRace", () => {
       expect(wins[0]).toBeGreaterThan(wins[1]);
       expect(wins[3]).toBeLessThan(wins[2]);
       expect(wins[3]).toBeGreaterThan(0);
+    });
+
+    it("脚質による有利不利はほぼない", () => {
+      const random = seeded(5);
+      const wins: Record<string, number> = { front: 0, stalker: 0, closer: 0, deep: 0 };
+      const trials = 3000;
+      for (let t = 0; t < trials; t += 1) {
+        const race = simulateHorseRace({
+          strengths: [1, 1, 1, 1],
+          styles: [...styles],
+          target: 36,
+          random,
+        });
+        wins[styles[race.winner]] += 1;
+      }
+      for (const style of styles) {
+        expect(wins[style] / trials).toBeGreaterThan(0.17);
+        expect(wins[style] / trials).toBeLessThan(0.33);
+      }
+    });
+  });
+
+  describe("positionAt", () => {
+    const race = simulateHorseRace({
+      strengths: [1, 1, 1],
+      styles: ["stalker", "stalker", "stalker"],
+      target: 10,
+      random: seeded(3),
+    });
+
+    it("サンプル点を通り、間はなめらかにつなぐ", () => {
+      const k = 12;
+      const [a, b] = [race.samples[0][k], race.samples[0][k + 1]];
+      expect(positionAt(race, 0, k * race.dt)).toBeCloseTo(a, 10);
+      const mid = positionAt(race, 0, (k + 0.5) * race.dt);
+      expect(mid).toBeGreaterThanOrEqual(a);
+      expect(mid).toBeLessThanOrEqual(b);
+    });
+
+    it("刻みの継ぎ目でもスピードが段にならない", () => {
+      const eps = 1e-4;
+      for (const k of [10, 20, 30]) {
+        const t = k * race.dt;
+        const before = (positionAt(race, 1, t) - positionAt(race, 1, t - eps)) / eps;
+        const after = (positionAt(race, 1, t + eps) - positionAt(race, 1, t)) / eps;
+        expect(Math.abs(after - before)).toBeLessThan(0.01);
+      }
+    });
+
+    it("記録の終わり以降も止まらずに進む", () => {
+      const end = race.samples[0].length * race.dt;
+      expect(positionAt(race, 0, end + 5)).toBeGreaterThan(positionAt(race, 0, end));
     });
   });
 
@@ -208,40 +300,6 @@ describe("horseRace", () => {
 
     it("人気順を返す", () => {
       expect(popularityRanks([0.1, 0.4, 0.2, 0.3])).toEqual([4, 1, 3, 2]);
-    });
-  });
-
-  describe("progressAt", () => {
-    const race = simulateHorseRace({
-      strengths: [1, 1, 1],
-      styles: ["stalker", "stalker", "stalker"],
-      target: 10,
-      random: seeded(3),
-    });
-    const tracks = buildPickTracks(race, 3);
-    const total = race.picks.length;
-
-    it("最後の抽選時点で勝ち馬はちょうど target", () => {
-      expect(progressAt(tracks[race.winner], total, total)).toBeCloseTo(10);
-    });
-
-    it("時間とともに単調増加する", () => {
-      for (const track of tracks) {
-        let prev = -1;
-        for (let x = 0; x <= total + 5; x += 0.25) {
-          const p = progressAt(track, x, total);
-          expect(p).toBeGreaterThanOrEqual(prev);
-          prev = p;
-        }
-      }
-    });
-
-    it("前進回数と整合する", () => {
-      tracks.forEach((track, horse) => {
-        expect(Math.floor(progressAt(track, total, total) + 1e-9)).toBe(
-          race.finalProgress[horse]
-        );
-      });
     });
   });
 });

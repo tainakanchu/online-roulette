@@ -1,21 +1,17 @@
 import { type FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  RACE_DISTANCES,
-  simulateHorseRace,
-  type RaceDistanceId,
-} from "@tainakanchu/roulette-core";
+import { distanceCategory, raceTarget, simulateHorseRace } from "@tainakanchu/roulette-core";
 import { useRaceCard, type RaceEntry } from "../../hooks/useRaceCard";
 import { ImageActions } from "../ImageActions";
+import { DistancePicker } from "./DistancePicker";
 import { RaceCard } from "./RaceCard";
 import { Commentator, type CommentaryLine } from "./commentary";
 import type { RaceScene, RaceTick } from "./scene/RaceScene";
 
 const COUNTDOWN_INTERVAL_MS = 720;
 const GO_HOLD_MS = 650;
-const DISTANCE_IDS: RaceDistanceId[] = ["sprint", "mile", "long"];
-// 抽選の消化にかける秒数（スローモーション分は別途伸びる）
-const RACE_SECONDS: Record<RaceDistanceId, number> = { sprint: 11, mile: 15, long: 21 };
+/** 勝ち馬がゴールするまでの実時間（スローモーション分は別途伸びる）。長い距離ほど少し速く流す */
+const raceSeconds = (meters: number) => 15 * Math.pow(meters / 1600, 0.85);
 
 type Phase = "idle" | "countdown" | "racing" | "finished";
 
@@ -104,7 +100,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     clearTimers();
     scene.setField(
       entries.map((e) => ({ number: e.number, name: e.name, color: e.color, seed: e.seed })),
-      RACE_DISTANCES[distance].meters
+      distance
     );
     setPhase("idle");
     setCountdown(null);
@@ -122,6 +118,10 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     setBet(null);
   }, [namesKey]);
 
+  const distanceLabel = `${t("race.meters", { meters: distance })} ${t(
+    `race.categories.${distanceCategory(distance)}`
+  )}`;
+
   // ----- ターフビジョン -----
   useEffect(() => {
     const scene = sceneRef.current;
@@ -134,21 +134,21 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     if (phase === "finished" && outcome) {
       scene.setVision({
         title: t("race.vision.result"),
-        subtitle: t(`race.distances.${distance}`, { meters: RACE_DISTANCES[distance].meters }),
+        subtitle: distanceLabel,
         rows: rowsFor(outcome.order),
       });
     } else {
       const byPopularity = [...entries].sort((a, b) => a.popularity - b.popularity);
       scene.setVision({
         title: t("race.vision.title"),
-        subtitle: t(`race.distances.${distance}`, { meters: RACE_DISTANCES[distance].meters }),
+        subtitle: distanceLabel,
         rows:
           phase === "idle"
             ? byPopularity.map((e) => ({ number: e.number, name: `${e.name}  ${e.odds.toFixed(1)}`, color: e.color }))
             : rowsFor(entries.map((e) => e.index)),
       });
     }
-  }, [entries, phase, outcome, distance, t, sceneReady]);
+  }, [entries, phase, outcome, distanceLabel, t, sceneReady]);
 
   // ----- レース進行 -----
   const start = useCallback(() => {
@@ -159,7 +159,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     const race = simulateHorseRace({
       strengths: entries.map((e) => e.strength),
       styles: entries.map((e) => e.style),
-      target: RACE_DISTANCES[distance].target,
+      target: raceTarget(distance),
     });
     const field = entries;
     const names = field.map((e) => e.name);
@@ -169,7 +169,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     scene.showGate();
     setOutcome(null);
     setLiveOrder([]);
-    setRemaining(RACE_DISTANCES[distance].meters);
+    setRemaining(distance);
     setSlowMotion(false);
     setCommentary({ key: "race.commentary.gate" });
     setPhase("countdown");
@@ -187,7 +187,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
         setCountdown(null);
         setPhase("racing");
         setCommentary(commentator.start());
-        scene.startRace(race, RACE_SECONDS[distance], {
+        scene.startRace(race, raceSeconds(distance), {
           onTick: (tick: RaceTick) => {
             setLiveOrder(tick.order);
             setRemaining(tick.remainingMeters);
@@ -260,21 +260,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
   return (
     <div className="horse-race">
       <div className="race-controls">
-        <div className="race-distance" role="radiogroup" aria-label={t("race.distance")}>
-          {DISTANCE_IDS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={distance === id}
-              className={`race-distance-option ${distance === id ? "is-active" : ""}`}
-              onClick={() => card.setDistance(id)}
-              disabled={locked}
-            >
-              {t(`race.distances.${id}`, { meters: RACE_DISTANCES[id].meters })}
-            </button>
-          ))}
-        </div>
+        <DistancePicker value={distance} onChange={card.setDistance} disabled={locked} />
         <div className="race-actions">
           <button type="button" className="race-start-button" onClick={start} disabled={!canStart}>
             🏇 {t("race.start")}
@@ -413,7 +399,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
         logins={card.logins}
         onLoginChange={card.setLogin}
         githubStatus={card.githubStatus}
-        onFetchGitHub={() => void card.fetchActivities()}
+        onFetchGitHub={card.fetchActivities}
         raceCount={card.history.length}
         onClearHistory={card.clearHistory}
       />

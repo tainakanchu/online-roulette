@@ -1,7 +1,7 @@
 import {
-  isRaceDistanceId,
+  DEFAULT_DISTANCE,
+  parseDistance,
   type GitHubActivity,
-  type RaceDistanceId,
   type RaceRecord,
 } from "@tainakanchu/roulette-core";
 import { readLocalStorage, writeLocalStorage } from "./localStorage";
@@ -25,20 +25,26 @@ const readJson = <T>(key: string, fallback: T): T => {
 
 // ----- レース履歴（新しい順） -----
 
-const isRaceRecord = (value: unknown): value is RaceRecord => {
-  if (!value || typeof value !== "object") return false;
+/** 保存済みの 1 レース分を読み取る（旧バージョンの距離 ID も m に変換する） */
+const toRaceRecord = (value: unknown): RaceRecord | null => {
+  if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
-  return (
-    typeof record.timestamp === "number" &&
-    isRaceDistanceId(record.distance) &&
-    Array.isArray(record.order) &&
-    record.order.every((name) => typeof name === "string")
-  );
+  const distance = parseDistance(record.distance);
+  if (
+    typeof record.timestamp !== "number" ||
+    distance === null ||
+    !Array.isArray(record.order) ||
+    !record.order.every((name) => typeof name === "string")
+  ) {
+    return null;
+  }
+  return { timestamp: record.timestamp, distance, order: record.order as string[] };
 };
 
 export const loadRaceHistory = (): RaceRecord[] => {
   const value = readJson<unknown>(HISTORY_KEY, []);
-  return Array.isArray(value) ? value.filter(isRaceRecord) : [];
+  if (!Array.isArray(value)) return [];
+  return value.map(toRaceRecord).filter((r): r is RaceRecord => r !== null);
 };
 
 export const saveRaceHistory = (history: RaceRecord[]) => {
@@ -47,13 +53,11 @@ export const saveRaceHistory = (history: RaceRecord[]) => {
 
 // ----- 距離 -----
 
-export const loadDistance = (): RaceDistanceId => {
-  const value = readLocalStorage(DISTANCE_KEY);
-  return isRaceDistanceId(value) ? value : "mile";
-};
+export const loadDistance = (): number =>
+  parseDistance(readLocalStorage(DISTANCE_KEY)) ?? DEFAULT_DISTANCE;
 
-export const saveDistance = (distance: RaceDistanceId) => {
-  writeLocalStorage(DISTANCE_KEY, distance);
+export const saveDistance = (meters: number) => {
+  writeLocalStorage(DISTANCE_KEY, String(meters));
 };
 
 // ----- GitHub 連携（馬名 → GitHub ユーザー名） -----

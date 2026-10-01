@@ -74,10 +74,13 @@
   },
   "race": {
     "distance": "距離",
-    "distances": {
-      "sprint": "短途 {{meters}}米",
-      "mile": "一哩 {{meters}}米",
-      "long": "長途 {{meters}}米"
+    "meters": "{{meters}}公尺",
+    "categories": {
+      "sprint": "短距離",
+      "mile": "一哩",
+      "intermediate": "中距離",
+      "long": "長距離",
+      "extended": "超長距離"
     },
     "start": "出閘！",
     "reset": "回到閘門",
@@ -99,7 +102,7 @@
     "card": {
       "title": "輪盤賽馬報",
       "raceName": "主賽事 · 輪盤盃 (G1)",
-      "course": "草地 {{meters}}米",
+      "course": "草地 {{meters}}公尺（{{category}}）",
       "field": "{{count}} 匹出賽",
       "headlines": {
         "front": "本報首選{{name}}，力拚一路領先到底",

@@ -3,8 +3,14 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { buildPickTracks, progressAt, type RaceSimulation } from "@tainakanchu/roulette-core";
-import { createEnvironment, TRACK_HALF_WIDTH, TRACK_LENGTH, type Environment } from "./environment";
+import { positionAt, winnerTime, type RaceSimulation } from "@tainakanchu/roulette-core";
+import {
+  createEnvironment,
+  FINISH_X,
+  TRACK_HALF_WIDTH,
+  WORLD_PER_METER,
+  type Environment,
+} from "./environment";
 import { HorseModel, type HorseSpec } from "./horseModel";
 import { createSignTexture, createSoftDotTexture } from "./textures";
 
@@ -38,8 +44,19 @@ const POST_FINISH_SECONDS = 4.2;
 const FINISH_HOLD_SECONDS = 1.3;
 const OVERRUN = 32;
 
+/** ゴール後は徐々に減速して止まるように見せる */
 const compressAfterFinish = (x: number) =>
-  x <= TRACK_LENGTH ? x : TRACK_LENGTH + OVERRUN * (1 - Math.exp(-(x - TRACK_LENGTH) / OVERRUN));
+  x <= FINISH_X ? x : FINISH_X + OVERRUN * (1 - Math.exp(-(x - FINISH_X) / OVERRUN));
+
+const smoothstep = (edge0: number, edge1: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+};
+
+/** スローモーション時の再生速度 */
+const SLOW_MOTION_SCALE = 0.35;
+/** 道中で内ラチ側へ寄っていく度合い（1 = 全馬ラチ沿い） */
+const LANE_SQUEEZE = 0.3;
 
 // ----- 土煙パーティクル -----
 const DUST_VERTEX = /* glsl */ `
@@ -236,10 +253,8 @@ export class RaceScene {
   private readonly lookAt = new THREE.Vector3(0, 1.5, 0);
   private readonly desiredPos = new THREE.Vector3();
   private readonly desiredLook = new THREE.Vector3();
-  private readonly tmp = new THREE.Vector3();
   private rafId = 0;
   private time = 0;
-  private frame = 0;
 
   private horses: HorseModel[] = [];
   private lanes: number[] = [];
@@ -247,13 +262,17 @@ export class RaceScene {
   private courseMarks = new THREE.Group();
   private courseDisposables: Array<{ dispose: () => void }> = [];
   private distanceMeters = 1600;
+  /** スタート地点の x 座標（距離が長いほど手前） */
+  private startX = FINISH_X - 1600 * WORLD_PER_METER;
 
   // レース状態
   private race: RaceSimulation | null = null;
-  private tracks: number[][] = [];
-  private totalDraws = 1;
-  private raceX = 0;
-  private drawsPerSecond = 1;
+  /** レース内部の時刻（単位時間） */
+  private raceT = 0;
+  /** 実時間 1 秒あたりに進めるレース内部時刻 */
+  private raceRate = 1;
+  /** 再生速度（スローモーションへは徐々に切り替える） */
+  private timeScale = 1;
   private running = false;
   private prevWorldX: number[] = [];
   private speeds: number[] = [];
@@ -266,14 +285,17 @@ export class RaceScene {
   private lastTickAt = 0;
   private excitement = 0;
   private slowMotion = false;
+  /** カメラが追う馬群の位置（なめらかに追従させる） */
+  private focusX = 0;
   private vision: VisionInfo | null = null;
   private visionDirty = true;
   private lastVisionAt = 0;
 
   constructor(private readonly container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
     const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 600;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, smallScreen ? 1.5 : 2));
+    // ポストプロセスがあるので解像度は控えめにして、その分 MSAA で輪郭をきれいにする
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, smallScreen ? 1.25 : 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -305,9 +327,13 @@ export class RaceScene {
     this.scene.add(this.courseMarks);
     this.scene.add(this.dust.points);
 
-    this.composer = new EffectComposer(this.renderer);
+    const target = new THREE.WebGLRenderTarget(1, 1, {
+      type: THREE.HalfFloatType,
+      samples: 4,
+    });
+    this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.22, 0.45, 0.92);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.22, 0.45, 0.92);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
 
@@ -327,19 +353,17 @@ export class RaceScene {
       this.scene.remove(horse.root);
       horse.dispose();
     }
+    this.distanceMeters = distanceMeters;
+    this.startX = FINISH_X - distanceMeters * WORLD_PER_METER;
     this.horses = specs.map((spec) => new HorseModel(spec));
     const n = specs.length;
     const laneWidth = n > 0 ? Math.min(1.7, (TRACK_HALF_WIDTH * 2 - 3) / n) : 1.7;
     // 1 番が内ラチ側（奥）
     this.lanes = specs.map((_, i) => ((n - 1) / 2) * laneWidth - i * laneWidth + 0.5);
-    this.horses.forEach((horse, i) => {
-      horse.root.position.set(0, 0, this.lanes[i]);
-      this.scene.add(horse.root);
-    });
-    this.prevWorldX = specs.map(() => 0);
-    this.speeds = specs.map(() => 0);
-    this.buildCourse(laneWidth, distanceMeters);
-    this.setShot("idle");
+    this.horses.forEach((horse) => this.scene.add(horse.root));
+    this.placeAtGate();
+    this.buildCourse(laneWidth);
+    this.setShot("idle", true, true);
   }
 
   setVision(info: VisionInfo) {
@@ -356,17 +380,20 @@ export class RaceScene {
     this.gate?.open();
   }
 
+  /**
+   * @param durationSeconds 勝ち馬がゴールするまでの実時間（スローモーション分は伸びる）
+   */
   startRace(race: RaceSimulation, durationSeconds: number, callbacks: RaceCallbacks) {
     this.race = race;
-    this.tracks = buildPickTracks(race, this.horses.length);
-    this.totalDraws = Math.max(1, race.picks.length);
-    this.drawsPerSecond = this.totalDraws / durationSeconds;
-    this.raceX = 0;
+    this.raceRate = Math.max(0.1, winnerTime(race)) / durationSeconds;
+    this.raceT = 0;
+    this.timeScale = 1;
     this.running = true;
     this.winnerCrossed = false;
     this.postFinishTime = 0;
     this.completed = false;
     this.callbacks = callbacks;
+    this.focusX = this.startX;
     this.gate?.open();
     this.setShot("chase");
   }
@@ -374,14 +401,9 @@ export class RaceScene {
   /** ゲートに戻す */
   resetToGate() {
     this.stopRace();
-    this.horses.forEach((horse, i) => {
-      horse.root.position.set(0, 0, this.lanes[i]);
-      horse.root.rotation.y = 0;
-    });
-    this.prevWorldX = this.horses.map(() => 0);
-    this.speeds = this.horses.map(() => 0);
+    this.placeAtGate();
     this.gate?.close();
-    this.setShot("idle");
+    this.setShot("idle", true, true);
   }
 
   async capture(): Promise<Blob> {
@@ -409,23 +431,35 @@ export class RaceScene {
 
   // ----- 内部 -----
 
+  private placeAtGate() {
+    this.horses.forEach((horse, i) => {
+      horse.root.position.set(this.startX, 0, this.lanes[i]);
+      horse.root.rotation.y = 0;
+    });
+    this.prevWorldX = this.horses.map(() => this.startX);
+    this.speeds = this.horses.map(() => 0);
+    this.focusX = this.startX;
+  }
+
   private stopRace() {
     this.running = false;
     this.race = null;
     this.winnerCrossed = false;
     this.completed = false;
     this.slowMotion = false;
+    this.timeScale = 1;
     this.excitement = 0;
     this.callbacks = {};
   }
 
-  private buildCourse(laneWidth: number, distanceMeters: number) {
-    this.distanceMeters = distanceMeters;
+  private buildCourse(laneWidth: number) {
+    const distanceMeters = this.distanceMeters;
     if (this.gate) {
       this.scene.remove(this.gate.group);
       this.gate.dispose();
     }
     this.gate = new StartingGate(this.lanes, laneWidth);
+    this.gate.group.position.x = this.startX;
     this.scene.add(this.gate.group);
 
     this.courseDisposables.forEach((d) => d.dispose());
@@ -450,24 +484,26 @@ export class RaceScene {
     const red = track(new THREE.MeshStandardMaterial({ color: "#d32f2f", roughness: 0.4 }));
     const line = add(new THREE.PlaneGeometry(0.5, TRACK_HALF_WIDTH * 2), white, false);
     line.rotation.x = -Math.PI / 2;
-    line.position.set(TRACK_LENGTH, 0.02, 0);
+    line.position.set(FINISH_X, 0.02, 0);
     line.receiveShadow = true;
     for (const side of [-1, 1]) {
       const pole = add(new THREE.CylinderGeometry(0.1, 0.1, 5, 10), white);
-      pole.position.set(TRACK_LENGTH, 2.5, side * (TRACK_HALF_WIDTH + 1.2));
+      pole.position.set(FINISH_X, 2.5, side * (TRACK_HALF_WIDTH + 1.2));
       const disc = add(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 32), red);
       disc.rotation.x = Math.PI / 2;
-      disc.position.set(TRACK_LENGTH, 4.6, side * (TRACK_HALF_WIDTH + 1.2));
+      disc.position.set(FINISH_X, 4.6, side * (TRACK_HALF_WIDTH + 1.2));
     }
-    // ハロン棒（残り距離）
+    // ハロン棒（残り距離）。共有ジオメトリ・マテリアルで本数が増えても軽く
+    const poleGeo = track(new THREE.CylinderGeometry(0.08, 0.08, 3, 8));
+    const signGeo = track(new THREE.PlaneGeometry(2.2, 0.6));
     const step = 200;
     for (let remain = step; remain < distanceMeters; remain += step) {
-      const x = TRACK_LENGTH * (1 - remain / distanceMeters);
-      const pole = add(new THREE.CylinderGeometry(0.08, 0.08, 3, 8), remain % 400 === 0 ? red : white);
+      const x = FINISH_X - remain * WORLD_PER_METER;
+      const pole = add(poleGeo, remain % 400 === 0 ? red : white);
       pole.position.set(x, 1.5, TRACK_HALF_WIDTH + 1.1);
       const signTex = track(createSignTexture(String(remain), "#ffffff", "#c62828"));
       const sign = add(
-        new THREE.PlaneGeometry(2.2, 0.6),
+        signGeo,
         track(new THREE.MeshStandardMaterial({ map: signTex, side: THREE.DoubleSide })),
         false
       );
@@ -480,15 +516,16 @@ export class RaceScene {
     const height = Math.max(1, this.container.clientHeight);
     this.renderer.setSize(width, height, false);
     this.composer.setSize(width, height);
-    this.bloom.resolution.set(width, height);
+    // ブルームは半分の解像度で十分
+    this.bloom.resolution.set(width / 2, height / 2);
     this.camera.aspect = width / height;
     // 縦長画面では少し引く
     this.camera.fov = width / height < 1.2 ? 55 : 42;
     this.camera.updateProjectionMatrix();
   }
 
-  private setShot(shot: Shot, cut = true) {
-    if (this.shot === shot) return;
+  private setShot(shot: Shot, cut = true, force = false) {
+    if (this.shot === shot && !force) return;
     this.shot = shot;
     this.shotTime = 0;
     if (cut) {
@@ -502,13 +539,17 @@ export class RaceScene {
     this.rafId = requestAnimationFrame(this.loop);
     const dt = Math.min(0.05, this.clock.getDelta());
     this.time += dt;
-    this.frame += 1;
     this.update(dt);
     this.composer.render();
   };
 
+  /** 馬のレース内部での位置（単位） */
   private horseProgress(i: number): number {
-    return progressAt(this.tracks[i] ?? [], this.raceX, this.totalDraws);
+    return this.race ? positionAt(this.race, i, this.raceT) : 0;
+  }
+
+  private currentOrder(progresses: number[]) {
+    return progresses.map((_, i) => i).sort((a, b) => progresses[b] - progresses[a]);
   }
 
   private update(realDt: number) {
@@ -517,37 +558,54 @@ export class RaceScene {
 
     if (race && this.running) {
       const target = race.target;
+      const courseLength = FINISH_X - this.startX;
       // 位置順と接戦判定
       const progresses = this.horses.map((_, i) => this.horseProgress(i));
-      const order = progresses.map((_, i) => i).sort((a, b) => progresses[b] - progresses[a]);
+      const order = this.currentOrder(progresses);
       const leader = progresses[order[0]] ?? 0;
       const second = progresses[order[1]] ?? 0;
       const leaderFraction = Math.min(1, leader / target);
       const gapTop2 = leader - second;
       this.slowMotion = !this.winnerCrossed && leaderFraction > 0.93 && gapTop2 < 0.9;
-      dt = realDt * (this.slowMotion ? 0.35 : 1);
+      // 再生速度は急に変えず、なめらかに寄せる
+      const targetScale = this.slowMotion ? SLOW_MOTION_SCALE : 1;
+      this.timeScale += (targetScale - this.timeScale) * (1 - Math.exp(-realDt * 5));
+      dt = realDt * this.timeScale;
       this.excitement = Math.min(1, Math.max(this.excitement * 0.98, leaderFraction * leaderFraction));
 
-      this.raceX += dt * this.drawsPerSecond;
+      this.raceT += dt * this.raceRate;
+      const innermost = this.lanes[0] ?? 0;
 
       // 馬を動かす
       this.horses.forEach((horse, i) => {
-        const raw = (this.horseProgress(i) / target) * TRACK_LENGTH;
+        const fraction = progresses[i] / target;
+        const raw = this.startX + fraction * courseLength;
         const x = compressAfterFinish(raw);
         const speed = dt > 0 ? (x - this.prevWorldX[i]) / dt : 0;
-        this.speeds[i] = this.speeds[i] * 0.85 + speed * 0.15;
+        // フレーム時間の揺らぎだけ吸収する軽い平滑化
+        this.speeds[i] += (speed - this.speeds[i]) * (1 - Math.exp(-realDt * 12));
         this.prevWorldX[i] = x;
-        horse.root.position.x = x;
+
+        // スタート後は少しずつ内ラチ側へ寄っていく（1 番人気でもラチ沿いを走る）
+        const squeeze = LANE_SQUEEZE * smoothstep(0.02, 0.3, fraction);
+        const sway = Math.sin(this.time * 0.7 + i * 1.7) * 0.06 * smoothstep(0.02, 0.1, fraction);
+        const z = innermost - (innermost - this.lanes[i]) * (1 - squeeze) + sway;
+        const dz = z - horse.root.position.z;
+        horse.root.position.set(x, 0, z);
+        // 横移動の向きに少しだけ首を振る
+        const yaw = dt > 0 && this.speeds[i] > 1 ? -Math.atan2(dz / dt, this.speeds[i]) : 0;
+        horse.root.rotation.y += (Math.max(-0.12, Math.min(0.12, yaw)) - horse.root.rotation.y) * 0.1;
+
         const rank = order.indexOf(i);
         const effort = leaderFraction > 0.7 ? Math.max(0, 1 - rank / 4) : 0.2;
         horse.update(dt, this.speeds[i], effort);
         if (this.speeds[i] > 4 && Math.random() < dt * 22) {
-          this.dust.emit(x - 0.7, horse.root.position.z, this.speeds[i]);
+          this.dust.emit(x - 0.7, z, this.speeds[i]);
         }
       });
 
-      // ゴール判定（描画上の勝ち馬は抽選の最終地点で必ずちょうどゴール）
-      if (!this.winnerCrossed && this.raceX >= this.totalDraws) {
+      // ゴール判定（勝ち馬はシミュレーション上のゴール時刻ちょうどにゴール線を越える）
+      if (!this.winnerCrossed && this.raceT >= winnerTime(race)) {
         this.winnerCrossed = true;
         this.excitement = 1;
         this.callbacks.onWinnerCross?.();
@@ -581,9 +639,10 @@ export class RaceScene {
       this.excitement *= 0.98;
     }
 
+    this.updateFocus(realDt);
     this.gate?.update(dt);
     this.dust.update(dt);
-    if (this.frame % 2 === 0) this.environment.update(this.time, this.excitement);
+    this.environment.update(this.time, this.excitement);
     this.updateVision();
     this.updateCamera(realDt);
   }
@@ -596,41 +655,49 @@ export class RaceScene {
     else this.setShot("stretch");
   }
 
-  /** 先頭集団の中心（上位 3 頭の平均） */
-  private packCenter(target: THREE.Vector3) {
-    if (this.horses.length === 0) return target.set(0, 0, 0);
-    const xs = this.horses.map((h) => h.root.position.x).sort((a, b) => b - a);
-    const top = xs.slice(0, Math.min(3, xs.length));
-    const x = top.reduce((a, b) => a + b, 0) / top.length;
-    return target.set(x, 0, 0);
+  /**
+   * カメラの注視点。先頭に近い馬ほど重く平均するので、順位が入れ替わっても飛ばない。
+   * さらに時間方向にも追従を遅らせてなめらかにする。
+   */
+  private updateFocus(dt: number) {
+    if (this.horses.length === 0) return;
+    let lead = -Infinity;
+    for (const h of this.horses) lead = Math.max(lead, h.root.position.x);
+    let sum = 0;
+    let weight = 0;
+    for (const h of this.horses) {
+      const w = Math.exp((h.root.position.x - lead) / 5);
+      sum += h.root.position.x * w;
+      weight += w;
+    }
+    const target = sum / weight;
+    this.focusX += (target - this.focusX) * (1 - Math.exp(-dt * 6));
   }
 
-  private leaderHorse(): HorseModel | undefined {
-    let best: HorseModel | undefined;
-    for (const h of this.horses) {
-      if (!best || h.root.position.x > best.root.position.x) best = h;
-    }
-    return best;
+  private leaderX(): number {
+    let best = -Infinity;
+    for (const h of this.horses) best = Math.max(best, h.root.position.x);
+    return Number.isFinite(best) ? best : this.focusX;
   }
 
   private computeShot(t: number) {
-    const pack = this.packCenter(this.tmp);
-    const px = pack.x;
+    const px = this.focusX;
+    const sx = this.startX;
     const winnerIdx = this.race?.winner ?? -1;
     switch (this.shot) {
       case "idle": {
         const a = t * 0.12 + 0.6;
-        this.desiredPos.set(Math.cos(a) * 16 + 2, 5 + Math.sin(t * 0.3) * 1.2, Math.sin(a) * 16 - 4);
-        this.desiredLook.set(0, 1.4, 0);
+        this.desiredPos.set(sx + Math.cos(a) * 16 + 2, 5 + Math.sin(t * 0.3) * 1.2, Math.sin(a) * 16 - 4);
+        this.desiredLook.set(sx, 1.4, 0);
         break;
       }
       case "gate":
-        this.desiredPos.set(11 - t * 0.6, 3.2, -6 + t * 0.4);
-        this.desiredLook.set(0, 1.6, 0);
+        this.desiredPos.set(sx + 11 - t * 0.6, 3.2, -6 + t * 0.4);
+        this.desiredLook.set(sx, 1.6, 0);
         break;
       case "chase":
         // ゲートから飛び出してくる馬群を正面斜めから
-        this.desiredPos.set(Math.max(px, 4) + 22 - Math.min(t, 3) * 2, 4, -7);
+        this.desiredPos.set(Math.max(px, sx + 4) + 22 - Math.min(t, 3) * 2, 4, -7);
         this.desiredLook.set(px, 1.3, 0);
         break;
       case "side":
@@ -643,26 +710,22 @@ export class RaceScene {
         this.desiredLook.set(px + 6, 0.5, -3);
         break;
       case "headon": {
-        const leader = this.leaderHorse();
-        const lx = leader ? leader.root.position.x : px;
+        const lx = this.leaderX();
         this.desiredPos.set(lx + 24 - Math.min(t, 4) * 1.5, 3.2, -4);
         this.desiredLook.set(px, 1.5, 0);
         break;
       }
-      case "stretch": {
-        const leader = this.leaderHorse();
-        const lx = leader ? leader.root.position.x : px;
-        this.desiredPos.set(lx + 3, 4, -(TRACK_HALF_WIDTH + 9));
-        this.desiredLook.set(lx - 1, 1.3, 0);
+      case "stretch":
+        this.desiredPos.set(px + 3, 4, -(TRACK_HALF_WIDTH + 9));
+        this.desiredLook.set(px - 1, 1.3, 0);
         break;
-      }
       case "finish":
         // 写真判定カメラ（ゴール板の円盤の下からゴール線を真横に）
-        this.desiredPos.set(TRACK_LENGTH + 0.15, 2.3, -(TRACK_HALF_WIDTH + 11));
-        this.desiredLook.set(TRACK_LENGTH, 1.2, 0);
+        this.desiredPos.set(FINISH_X + 0.15, 2.3, -(TRACK_HALF_WIDTH + 11));
+        this.desiredLook.set(FINISH_X, 1.2, 0);
         break;
       case "winner": {
-        const w = this.horses[winnerIdx] ?? this.leaderHorse();
+        const w = this.horses[winnerIdx];
         const wx = w ? w.root.position.x : px;
         const wz = w ? w.root.position.z : 0;
         const a = -1.2 + t * 0.35;
@@ -702,8 +765,7 @@ export class RaceScene {
     let rows = this.vision.rows;
     if (this.running && this.race) {
       // レース中は現在の位置順を表示
-      const progresses = this.horses.map((_, i) => this.horseProgress(i));
-      const order = progresses.map((_, i) => i).sort((a, b) => progresses[b] - progresses[a]);
+      const order = this.currentOrder(this.horses.map((_, i) => this.horseProgress(i)));
       rows = order.map((i) => this.vision!.rows[i]).filter(Boolean);
     }
     const g = ctx.createLinearGradient(0, 0, 0, canvas.height);

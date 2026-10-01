@@ -7,9 +7,16 @@ export { divideIntoGroups, GROUPING_METHODS, isValidGroupingMethod } from "./gro
 export type { GroupResult, GroupingMethod } from "./grouping";
 export { drawBattleSequence, tallyBattle } from "./battle";
 export {
-  RACE_DISTANCES,
+  MIN_DISTANCE,
+  MAX_DISTANCE,
+  DISTANCE_STEP,
+  DEFAULT_DISTANCE,
+  DISTANCE_PRESETS,
   MAX_HORSES,
-  isRaceDistanceId,
+  distanceCategory,
+  clampDistance,
+  parseDistance,
+  raceTarget,
   recentFinishes,
   formScore,
   activityPoints,
@@ -21,16 +28,15 @@ export {
   nameHash,
   styleMultiplier,
   simulateHorseRace,
+  positionAt,
+  winnerTime,
   estimateWinProbabilities,
   oddsFromProbability,
   marksFromProbabilities,
   popularityRanks,
-  buildPickTracks,
-  progressAt,
 } from "./horseRace";
 export type {
-  RaceDistanceId,
-  RaceDistance,
+  DistanceCategory,
   RunningStyle,
   RaceRecord,
   Finish,

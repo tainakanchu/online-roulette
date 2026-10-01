@@ -17,32 +17,142 @@
 }
 
 .race-distance {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+.race-distance-head {
   display: flex;
-  gap: 4px;
-  padding: 3px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
-.race-distance-option {
-  padding: 7px 12px;
+.race-distance-label {
   font-size: 13px;
-  font-weight: 600;
-  font-family: inherit;
-  color: rgba(255, 255, 255, 0.75);
-  background: transparent;
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.race-distance-option.is-active {
+.race-distance-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.race-distance-category {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
   color: #1d0f3d;
+  border-radius: 999px;
+}
+
+/* SMILE 区分ごとの色（スライダーのトラックと揃える） */
+.race-distance-category--sprint {
+  background: #ff8a65;
+}
+.race-distance-category--mile {
   background: #ffd23f;
 }
+.race-distance-category--intermediate {
+  background: #7ee081;
+}
+.race-distance-category--long {
+  background: #4fc3f7;
+}
+.race-distance-category--extended {
+  background: #b39ddb;
+}
 
-.race-distance-option:disabled {
+.race-distance-slider {
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 1000〜3600m のうち、1300 / 1900 / 2100 / 2700m で区分が変わる */
+.race-distance-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #ff8a65 0 11.5%,
+    #ffd23f 11.5% 34.6%,
+    #7ee081 34.6% 42.3%,
+    #4fc3f7 42.3% 65.4%,
+    #b39ddb 65.4% 100%
+  );
+}
+
+.race-distance-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #ff8a65 0 11.5%,
+    #ffd23f 11.5% 34.6%,
+    #7ee081 34.6% 42.3%,
+    #4fc3f7 42.3% 65.4%,
+    #b39ddb 65.4% 100%
+  );
+}
+
+.race-distance-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -7px;
+  border: 3px solid #1d0f3d;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.race-distance-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #1d0f3d;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.race-distance-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.race-distance-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.race-distance-preset {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.race-distance-preset.is-active {
+  color: #1d0f3d;
+  background: #ffd23f;
+  border-color: #ffd23f;
+}
+
+.race-distance-preset:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -782,9 +892,20 @@
     justify-content: center;
   }
 
-  .race-distance-option {
-    padding: 7px 9px;
-    font-size: 12px;
+  .race-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .race-distance-presets {
+    flex-wrap: nowrap;
+    gap: 3px;
+  }
+
+  .race-distance-preset {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 4px 0;
   }
 
   .race-commentary {
