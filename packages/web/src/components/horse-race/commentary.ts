@@ -8,6 +8,9 @@ export interface CommentaryLine {
 }
 
 const MIN_INTERVAL_MS = 1300;
+/** 1・2着の見た目の差（単位）。「接戦」は約15m、「写真判定」は約7m（2〜3馬身） */
+const CLOSE_GAP = 0.35;
+const PHOTO_GAP = 0.15;
 
 export class Commentator {
   private lastAt = 0;
@@ -62,7 +65,7 @@ export class Commentator {
 
     if (!ready) return null;
 
-    if (!this.saidClose && tick.leaderFraction > 0.88 && tick.gapTop2 < 1) {
+    if (!this.saidClose && tick.leaderFraction > 0.88 && tick.gapTop2 < CLOSE_GAP) {
       this.saidClose = true;
       return say({ key: "race.commentary.close", params: { first: name(first), second: name(second) } });
     }
@@ -93,7 +96,7 @@ export class Commentator {
   finish(winner: number): CommentaryLine {
     this.lastAt = this.now();
     const params = { name: this.names[winner] ?? "" };
-    return this.lastGap < 0.6
+    return this.lastGap < PHOTO_GAP
       ? { key: "race.commentary.photo", params }
       : { key: "race.commentary.finish", params };
   }

@@ -3,7 +3,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { positionAt, winnerTime, type RaceSimulation } from "@tainakanchu/roulette-core";
+import { runningPositionAt, winnerTime, type RaceSimulation } from "@tainakanchu/roulette-core";
 import {
   createEnvironment,
   FINISH_X,
@@ -42,6 +42,8 @@ type Shot = "idle" | "gate" | "chase" | "side" | "aerial" | "headon" | "stretch"
 
 const POST_FINISH_SECONDS = 4.2;
 const FINISH_HOLD_SECONDS = 1.3;
+/** スローモーションにする1・2着の見た目の差（単位。約13m） */
+const CLOSE_FINISH_GAP = 0.3;
 const OVERRUN = 32;
 
 /** ゴール後は徐々に減速して止まるように見せる */
@@ -566,7 +568,7 @@ export class RaceScene {
 
   /** 馬のレース内部での位置（単位） */
   private horseProgress(i: number): number {
-    return this.race ? positionAt(this.race, i, this.raceT) : 0;
+    return this.race ? runningPositionAt(this.race, i, this.raceT) : 0;
   }
 
   private currentOrder(progresses: number[]) {
@@ -587,7 +589,7 @@ export class RaceScene {
       const second = progresses[order[1]] ?? 0;
       const leaderFraction = Math.min(1, leader / target);
       const gapTop2 = leader - second;
-      this.slowMotion = !this.winnerCrossed && leaderFraction > 0.93 && gapTop2 < 0.9;
+      this.slowMotion = !this.winnerCrossed && leaderFraction > 0.93 && gapTop2 < CLOSE_FINISH_GAP;
       // 再生速度は急に変えず、なめらかに寄せる
       const targetScale = this.slowMotion ? SLOW_MOTION_SCALE : 1;
       this.timeScale += (targetScale - this.timeScale) * (1 - Math.exp(-realDt * 5));

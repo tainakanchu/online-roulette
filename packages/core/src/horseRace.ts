@@ -382,6 +382,42 @@ export const positionAt = (race: RaceSimulation, horse: number, t: number): numb
 export const winnerTime = (race: RaceSimulation): number =>
   race.winner >= 0 ? race.finishTimes[race.winner] : 0;
 
+/** 見た目のスピードのうち、一定ペースが占める割合（残りが抽選による揺らぎ） */
+const BASE_PACE_SHARE = 0.75;
+/** 2着以下のゴール時刻の差を描画上で詰める倍率（馬群が縦長になりすぎないように） */
+const FINISH_GAP_SCALE = 0.3;
+/** 発走直後の加速の時定数（単位時間） */
+const START_EASE = 0.8;
+
+const easedTime = (t: number): number => t - START_EASE * (1 - Math.exp(-t / START_EASE));
+
+/** 一定ペースの基準にするゴール時刻。ゴールしていない馬は記録の終わりの速度で延長する */
+const paceFinishTime = (race: RaceSimulation, horse: number): number => {
+  const finish = race.finishTimes[horse];
+  if (Number.isFinite(finish)) return finish;
+  const s = race.samples[horse] ?? [];
+  const last = s.length - 1;
+  const end = Math.max(last, 1) * race.dt;
+  const pos = s[last] ?? 0;
+  const v = last > 0 ? (s[last] - s[last - 1]) / race.dt : 0;
+  return v > 0 ? end + (race.target - pos) / v : (end * race.target) / Math.max(pos, 1e-3);
+};
+
+/**
+ * 描画用の位置。抽選による位置に「ゴール時刻ちょうどにゴールする等速の位置」を混ぜ、
+ * 当たりが途切れても馬が止まって見えないようにする。勝ち馬のゴール時刻と着順は positionAt と同じ。
+ */
+export const runningPositionAt = (race: RaceSimulation, horse: number, t: number): number => {
+  const elapsed = Math.max(0, t);
+  const finish = paceFinishTime(race, horse);
+  const first = winnerTime(race);
+  const shownFinish = first + (finish - first) * FINISH_GAP_SCALE;
+  const pace = (race.target * easedTime(elapsed)) / easedTime(shownFinish);
+  // 抽選による位置も、詰めたゴール時刻に合わせて時間を伸縮する
+  const lottery = positionAt(race, horse, (t * finish) / shownFinish);
+  return (1 - BASE_PACE_SHARE) * lottery + BASE_PACE_SHARE * pace;
+};
+
 /** モンテカルロで各馬の勝率を見積もる（オッズ・印に使う） */
 export const estimateWinProbabilities = (
   strengths: number[],
