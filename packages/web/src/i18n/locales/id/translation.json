@@ -101,7 +101,10 @@
     },
     "card": {
       "title": "Koran Pacuan Roulette",
-      "raceName": "Balapan Utama · Roulette Stakes (G1)",
+      "raceNamePrefix": "Balapan Utama ·",
+      "raceNameLabel": "Nama balapan",
+      "gradeLabel": "Kelas",
+      "gradeNone": "Tanpa",
       "course": "Rumput {{meters}}m ({{category}})",
       "field": "{{count}} kuda",
       "headlines": {

@@ -101,7 +101,10 @@
     },
     "card": {
       "title": "Roulette Racing Form",
-      "raceName": "Main Race · Roulette Stakes (G1)",
+      "raceNamePrefix": "Main Race ·",
+      "raceNameLabel": "Race name",
+      "gradeLabel": "Grade",
+      "gradeNone": "None",
       "course": "Turf {{meters}}m ({{category}})",
       "field": "{{count}} runners",
       "headlines": {

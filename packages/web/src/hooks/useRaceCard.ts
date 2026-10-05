@@ -25,11 +25,17 @@ import {
   loadDistance,
   loadGitHubLogins,
   loadRaceHistory,
+  loadRaceGrade,
+  loadRaceName,
+  normalizeRaceName,
   saveActivityCache,
   saveDistance,
   saveGitHubLogins,
   saveRaceHistory,
+  saveRaceGrade,
+  saveRaceName,
   type CachedActivity,
+  type RaceGrade,
 } from "../utils/horseRaceStorage";
 import {
   fetchGitHubActivity,
@@ -63,6 +69,8 @@ export interface RaceEntry {
 /** 出走表（競馬新聞）に必要なデータをまとめて管理する */
 export const useRaceCard = (options: string[]) => {
   const [distance, setDistanceState] = useState<number>(loadDistance);
+  const [raceName, setRaceNameState] = useState<string>(loadRaceName);
+  const [raceGrade, setRaceGradeState] = useState<RaceGrade>(loadRaceGrade);
   const [history, setHistory] = useState<RaceRecord[]>(loadRaceHistory);
   const [logins, setLogins] = useState<Record<string, string>>(loadGitHubLogins);
   const [activityCache, setActivityCache] =
@@ -75,6 +83,17 @@ export const useRaceCard = (options: string[]) => {
     const value = clampDistance(meters);
     setDistanceState(value);
     saveDistance(value);
+  }, []);
+
+  const setRaceName = useCallback((value: string) => {
+    const name = normalizeRaceName(value);
+    setRaceNameState(name);
+    saveRaceName(name);
+  }, []);
+
+  const setRaceGrade = useCallback((grade: RaceGrade) => {
+    setRaceGradeState(grade);
+    saveRaceGrade(grade);
   }, []);
 
   const base = useMemo(
@@ -188,6 +207,10 @@ export const useRaceCard = (options: string[]) => {
   return {
     distance,
     setDistance,
+    raceName,
+    setRaceName,
+    raceGrade,
+    setRaceGrade,
     entries,
     history,
     recordRace,

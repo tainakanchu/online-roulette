@@ -580,6 +580,128 @@
   font-weight: 700;
 }
 
+.race-card-racename {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.race-card-racename-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: text;
+}
+
+.race-card-racename-field:focus-within {
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+.race-card-racename-input {
+  width: 11em;
+  max-width: 50vw;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.race-card-racename-input:focus {
+  outline: none;
+}
+
+.race-card-racename-input::placeholder {
+  color: inherit;
+  opacity: 0.45;
+}
+
+.race-card-racename-icon {
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.race-card-racename-field:has(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+}
+
+.race-card-racename-field:has(:disabled) .race-card-racename-icon {
+  visibility: hidden;
+}
+
+/* JRA 風の格付けバッジ（G1 青・G2 赤・G3 緑） */
+.race-card-grade-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.race-card-grade-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #fff;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.race-card-grade-wrap:has(.race-card-grade--none)::after {
+  color: inherit;
+}
+
+.race-card-grade-wrap:has(:disabled)::after {
+  display: none;
+}
+
+.race-card-grade {
+  appearance: none;
+  padding: 3px 20px 3px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: #555;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.race-card-grade--G1 {
+  background: #1f4fa8;
+}
+
+.race-card-grade--G2 {
+  background: #c8102e;
+}
+
+.race-card-grade--G3 {
+  background: #0f8a3c;
+}
+
+.race-card-grade--none {
+  background: transparent;
+  color: inherit;
+  border: 1px dashed var(--ink);
+}
+
+.race-card-grade:disabled {
+  cursor: default;
+}
+
 .race-card-headline {
   margin: 8px 0;
   font-size: 15px;

@@ -101,7 +101,10 @@
     },
     "card": {
       "title": "ルーレット競馬新聞",
-      "raceName": "メインレース ルーレット記念 (G1)",
+      "raceNamePrefix": "メインレース",
+      "raceNameLabel": "レース名",
+      "gradeLabel": "格付け",
+      "gradeNone": "なし",
       "course": "芝 {{meters}}m（{{category}}）",
       "field": "{{count}}頭立て",
       "headlines": {
