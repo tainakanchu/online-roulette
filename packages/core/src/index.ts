@@ -29,6 +29,7 @@ export {
   styleMultiplier,
   simulateHorseRace,
   positionAt,
+  runningPositionAt,
   winnerTime,
   estimateWinProbabilities,
   oddsFromProbability,

@@ -10,6 +10,7 @@ import {
   popularityRanks,
   positionAt,
   raceTarget,
+  runningPositionAt,
   recentFinishes,
   runningStyleFor,
   simulateHorseRace,
@@ -284,6 +285,46 @@ describe("horseRace", () => {
     it("記録の終わり以降も止まらずに進む", () => {
       const end = race.samples[0].length * race.dt;
       expect(positionAt(race, 0, end + 5)).toBeGreaterThan(positionAt(race, 0, end));
+    });
+  });
+
+  describe("runningPositionAt", () => {
+    const target = 30;
+    const race = simulateHorseRace({
+      strengths: [1, 1, 1, 1, 1, 1],
+      styles: ["front", "stalker", "closer", "deep", "stalker", "closer"],
+      target,
+      random: seeded(11),
+    });
+
+    it("勝ち馬のゴール時刻と着順は positionAt と同じ", () => {
+      const first = winnerTime(race);
+      expect(runningPositionAt(race, race.winner, first)).toBeCloseTo(target, 3);
+      race.order.slice(1).forEach((i) => {
+        expect(runningPositionAt(race, i, first)).toBeLessThan(target);
+      });
+      // 描画上のゴール順
+      const crossing = race.order.map((i) => {
+        let t = 0;
+        while (runningPositionAt(race, i, t) < target) t += 0.01;
+        return t;
+      });
+      expect([...crossing].sort((a, b) => a - b)).toEqual(crossing);
+    });
+
+    it("スタート後は止まらずに一定以上のスピードで進む", () => {
+      const dt = 0.05;
+      const pace = target / winnerTime(race);
+      race.order.forEach((i) => {
+        for (let t = 2; t < race.finishTimes[i]; t += dt) {
+          const speed = (runningPositionAt(race, i, t + dt) - runningPositionAt(race, i, t)) / dt;
+          expect(speed).toBeGreaterThan(pace * 0.3);
+        }
+      });
+    });
+
+    it("発走時はゲート位置から動き出す", () => {
+      expect(runningPositionAt(race, 0, 0)).toBe(0);
     });
   });
 
