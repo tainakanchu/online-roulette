@@ -2,6 +2,7 @@ import { type FC, useCallback, useEffect, useMemo, useRef, useState } from "reac
 import { useTranslation } from "react-i18next";
 import { distanceCategory, raceTarget, simulateHorseRace } from "@tainakanchu/roulette-core";
 import { useRaceCard, type RaceEntry } from "../../hooks/useRaceCard";
+import { generateHorseRaceResultImage } from "../../utils/imageUtils";
 import { ImageActions } from "../ImageActions";
 import { DistancePicker } from "./DistancePicker";
 import { RaceCard } from "./RaceCard";
@@ -29,7 +30,7 @@ interface HorseRaceModeProps {
 }
 
 export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNotify }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const card = useRaceCard(options);
   const { entries, distance } = card;
 
@@ -245,15 +246,39 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     }
   }, []);
 
-  const getResultBlob = useCallback(async () => {
-    const scene = sceneRef.current;
-    if (!scene) throw new Error("Scene not ready");
-    return scene.capture();
-  }, []);
-
   const winnerEntry = outcome ? outcome.field[outcome.winner] : undefined;
   const betEntry = bet !== null ? (outcome?.field ?? entries)[bet] : undefined;
   const betHit = outcome !== null && bet !== null && bet === outcome.winner;
+  const betResult = betEntry
+    ? betHit
+      ? t("race.bet.hit", { odds: betEntry.odds.toFixed(1), payout: Math.round(betEntry.odds * 100) })
+      : t("race.bet.miss", { name: betEntry.name })
+    : undefined;
+
+  const getResultBlob = useCallback(async () => {
+    const scene = sceneRef.current;
+    if (!scene || !outcome) throw new Error("No race result");
+    return generateHorseRaceResultImage({
+      photo: scene.getFinishPhoto(),
+      rows: outcome.order
+        .map((i) => outcome.field[i])
+        .filter(Boolean)
+        .map((e) => ({
+          number: e.number,
+          name: e.name,
+          color: e.color,
+          detail: t("race.result.odds", { odds: e.odds.toFixed(1), pop: e.popularity }),
+        })),
+      betResult,
+      betHit,
+      labels: {
+        title: `${t("mode.horseRace")} ・ ${distanceLabel}`,
+        winnerLabel: t("race.result.winner"),
+        rank: (rank) => t("race.result.rank", { rank }),
+      },
+      language: i18n.language,
+    });
+  }, [betHit, betResult, distanceLabel, i18n.language, outcome, t]);
 
   const countdownLabel = countdown === 0 ? t("ui.go") : countdown !== null ? String(countdown) : "";
 
@@ -357,12 +382,8 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
                 );
               })}
             </ol>
-            {betEntry && (
-              <div className={`race-result-bet ${betHit ? "is-hit" : "is-miss"}`}>
-                {betHit
-                  ? t("race.bet.hit", { odds: betEntry.odds.toFixed(1), payout: Math.round(betEntry.odds * 100) })
-                  : t("race.bet.miss", { name: betEntry.name })}
-              </div>
+            {betResult && (
+              <div className={`race-result-bet ${betHit ? "is-hit" : "is-miss"}`}>{betResult}</div>
             )}
           </div>
         )}
