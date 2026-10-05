@@ -103,6 +103,15 @@ export const copyImageToClipboard = async (blob: Blob): Promise<void> => {
   }
 };
 
+/** e.g. "roulette-result" → roulette-result-YYYYMMDD-HHMM.png */
+export const buildFilename = (prefix: string, extension = "png"): string => {
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${prefix}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+    now.getDate()
+  )}-${pad(now.getHours())}${pad(now.getMinutes())}.${extension}`;
+};
+
 export const downloadImage = (blob: Blob, filename: string): void => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

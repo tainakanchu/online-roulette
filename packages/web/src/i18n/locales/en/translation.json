@@ -154,6 +154,10 @@
       "odds": "{{odds}}x · Fav #{{pop}}",
       "winner": "🏆 Winner"
     },
+    "video": {
+      "save": "Save video",
+      "downloaded": "Race video downloaded!"
+    },
     "vision": {
       "title": "Roulette Stakes",
       "result": "Official result"

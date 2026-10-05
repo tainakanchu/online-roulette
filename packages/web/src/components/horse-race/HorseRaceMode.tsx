@@ -2,15 +2,18 @@ import { type FC, useCallback, useEffect, useMemo, useRef, useState } from "reac
 import { useTranslation } from "react-i18next";
 import { distanceCategory, raceTarget, simulateHorseRace } from "@tainakanchu/roulette-core";
 import { useRaceCard, type RaceEntry } from "../../hooks/useRaceCard";
-import { generateHorseRaceResultImage } from "../../utils/imageUtils";
+import { buildFilename, downloadImage, generateHorseRaceResultImage } from "../../utils/imageUtils";
 import { ImageActions } from "../ImageActions";
 import { DistancePicker } from "./DistancePicker";
 import { RaceCard } from "./RaceCard";
 import { Commentator, type CommentaryLine } from "./commentary";
+import { isRaceRecordingSupported, RaceRecorder, type RaceVideo } from "./raceRecorder";
 import type { RaceScene, RaceTick } from "./scene/RaceScene";
 
 const COUNTDOWN_INTERVAL_MS = 720;
 const GO_HOLD_MS = 650;
+/** 確定表示まで映すため、onComplete 後も少し録画を続ける */
+const RECORD_TAIL_MS = 2500;
 /** 勝ち馬がゴールするまでの実時間（スローモーション分は別途伸びる）。長い距離ほど少し速く流す */
 const raceSeconds = (meters: number) => 15 * Math.pow(meters / 1600, 0.85);
 
@@ -37,6 +40,9 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
   const stageRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<RaceScene | null>(null);
   const timersRef = useRef<number[]>([]);
+  const recorderRef = useRef<RaceRecorder | null>(null);
+  const canRecord = useMemo(() => isRaceRecordingSupported(), []);
+  const [video, setVideo] = useState<RaceVideo | null>(null);
   const [sceneError, setSceneError] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -62,6 +68,13 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     timersRef.current.push(window.setTimeout(fn, ms));
   }, []);
 
+  const discardRecording = useCallback(() => {
+    sceneRef.current?.setFrameListener(null);
+    recorderRef.current?.dispose();
+    recorderRef.current = null;
+    setVideo(null);
+  }, []);
+
   // ----- three.js シーンの生成（遅延ロード） -----
   useEffect(() => {
     let disposed = false;
@@ -85,6 +98,8 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     return () => {
       disposed = true;
       clearTimers();
+      recorderRef.current?.dispose();
+      recorderRef.current = null;
       scene?.dispose();
       sceneRef.current = null;
     };
@@ -99,6 +114,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     const scene = sceneRef.current;
     if (!scene) return;
     clearTimers();
+    discardRecording();
     scene.setField(
       entries.map((e) => ({ number: e.number, name: e.name, color: e.color, seed: e.seed })),
       distance
@@ -166,6 +182,13 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     const names = field.map((e) => e.name);
     const commentator = new Commentator(names);
 
+    discardRecording();
+    const recorder = canRecord ? new RaceRecorder() : null;
+    if (recorder) {
+      recorderRef.current = recorder;
+      scene.setFrameListener((canvas) => recorder.captureFrame(canvas));
+    }
+
     scene.resetToGate();
     scene.showGate();
     setOutcome(null);
@@ -212,15 +235,26 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
               order: race.order.map((i) => names[i]),
             });
             onFinish?.(names[race.winner] ?? "");
+            if (recorder) {
+              later(() => {
+                scene.setFrameListener(null);
+                void recorder.stop().then((result) => {
+                  if (recorderRef.current !== recorder) return;
+                  recorderRef.current = null;
+                  setVideo(result);
+                });
+              }, RECORD_TAIL_MS);
+            }
           },
         });
       }, GO_HOLD_MS);
     };
     later(() => tickCountdown(2), COUNTDOWN_INTERVAL_MS);
-  }, [canStart, card, clearTimers, distance, entries, later, onFinish]);
+  }, [canRecord, canStart, card, clearTimers, discardRecording, distance, entries, later, onFinish]);
 
   const reset = useCallback(() => {
     clearTimers();
+    discardRecording();
     sceneRef.current?.resetToGate();
     setPhase("idle");
     setCountdown(null);
@@ -229,7 +263,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     setLiveOrder([]);
     setRemaining(null);
     setSlowMotion(false);
-  }, [clearTimers]);
+  }, [clearTimers, discardRecording]);
 
   // ----- 全画面 -----
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -281,6 +315,53 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
   }, [betHit, betResult, distanceLabel, i18n.language, outcome, t]);
 
   const countdownLabel = countdown === 0 ? t("ui.go") : countdown !== null ? String(countdown) : "";
+
+  // 録画に焼き込む HUD（毎フレームは recorder 側が ref から読む）
+  useEffect(() => {
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+    const status =
+      countdown !== null
+        ? countdownLabel
+        : phase === "racing" && remaining !== null
+          ? remaining > 0
+            ? t("race.remaining", { meters: remaining })
+            : t("race.goal")
+          : "";
+    recorder.overlay = {
+      commentary: commentary && phase !== "idle" ? t(commentary.key, commentary.params) : "",
+      status,
+      order:
+        phase === "racing"
+          ? liveOrder
+              .map((i) => entries[i])
+              .filter(Boolean)
+              .map((e) => ({ number: e.number, color: e.color }))
+          : [],
+      result:
+        phase === "finished" && outcome
+          ? {
+              title: t("race.result.title"),
+              rows: outcome.order
+                .slice(0, 3)
+                .map((i, rank) => ({ rank, e: outcome.field[i] }))
+                .filter(({ e }) => Boolean(e))
+                .map(({ rank, e }) => ({
+                  rank: t("race.result.rank", { rank: rank + 1 }),
+                  number: e.number,
+                  color: e.color,
+                  name: e.name,
+                })),
+            }
+          : null,
+    };
+  }, [commentary, countdown, countdownLabel, entries, liveOrder, outcome, phase, remaining, t]);
+
+  const downloadVideo = useCallback(() => {
+    if (!video) return;
+    downloadImage(video.blob, buildFilename("horse-race", video.extension));
+    onNotify?.(t("race.video.downloaded"));
+  }, [onNotify, t, video]);
 
   return (
     <div className="horse-race">
@@ -402,6 +483,11 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
           )}
           <div className="battle-winner-label">{t("race.result.winner")}</div>
           <div className="battle-winner-value">{winnerEntry.name}</div>
+          {video && (
+            <button type="button" className="race-video-button" onClick={downloadVideo}>
+              🎬 {t("race.video.save")}
+            </button>
+          )}
         </div>
       )}
 

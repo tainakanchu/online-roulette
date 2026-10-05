@@ -154,6 +154,10 @@
       "odds": "単勝{{odds}}倍・{{pop}}番人気",
       "winner": "🏆 優勝"
     },
+    "video": {
+      "save": "動画を保存",
+      "downloaded": "レース動画をダウンロードしました!"
+    },
     "vision": {
       "title": "ルーレット記念",
       "result": "着順確定"
