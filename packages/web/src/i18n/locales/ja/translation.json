@@ -28,7 +28,8 @@
   "mode": {
     "roulette": "ルーレット",
     "grouping": "グループ",
-    "battle": "バトル"
+    "battle": "バトル",
+    "horseRace": "競馬"
   },
   "grouping": {
     "groupCount": "グループ数:",
@@ -70,5 +71,104 @@
     "clear": "クリア",
     "leading": "首位",
     "go": "GO!"
+  },
+  "race": {
+    "distance": "距離",
+    "meters": "{{meters}}m",
+    "categories": {
+      "sprint": "短距離",
+      "mile": "マイル",
+      "intermediate": "中距離",
+      "long": "長距離",
+      "extended": "超長距離"
+    },
+    "start": "出走！",
+    "reset": "ゲートに戻す",
+    "loading": "競馬場を準備中…",
+    "webglError": "3D 表示に対応していないブラウザのため、競馬モードを表示できません。",
+    "needTwo": "2頭以上で出走できます",
+    "overflow": "出走できるのは{{max}}頭までです（{{count}}頭は除外）",
+    "fullscreen": "全画面",
+    "exitFullscreen": "全画面を終了",
+    "remaining": "残り {{meters}}m",
+    "goal": "ゴール！",
+    "slowMotion": "SLOW",
+    "styles": {
+      "front": "逃げ",
+      "stalker": "先行",
+      "closer": "差し",
+      "deep": "追込"
+    },
+    "card": {
+      "title": "ルーレット競馬新聞",
+      "raceName": "メインレース ルーレット記念 (G1)",
+      "course": "芝 {{meters}}m（{{category}}）",
+      "field": "{{count}}頭立て",
+      "headlines": {
+        "front": "{{name}}が本紙◎。ハナを切って逃げ切りを狙う",
+        "stalker": "{{name}}が本紙◎。好位から抜け出しを狙う",
+        "closer": "{{name}}が本紙◎。直線一気の差し切りを狙う",
+        "deep": "{{name}}が本紙◎。後方一気の大外強襲を狙う"
+      },
+      "frame": "枠",
+      "number": "馬番",
+      "mark": "印",
+      "name": "馬名",
+      "style": "脚質",
+      "form": "近5走",
+      "training": "調教",
+      "rating": "能力",
+      "odds": "単勝",
+      "bet": "予想",
+      "popularity": "{{rank}}番人気",
+      "debut": "初出走",
+      "note": "※ 能力は近走成績と GitHub 調教データから算出。オッズはシミュレーションによる推定値です。能力差は勝敗に少しだけ影響します。",
+      "clearHistory": "戦績をリセット（{{count}}レース）",
+      "clearConfirm": "これまでの戦績をすべて削除しますか？"
+    },
+    "github": {
+      "title": "GitHub 調教データ",
+      "description": "馬に GitHub ユーザー名を紐づけると、直近14日の公開活動（コミット・PR・レビュー・Issue）を調教評価として能力に反映します。公開情報のみ、1ユーザー1回の取得です（1時間キャッシュ）。",
+      "placeholder": "GitHub ユーザー名",
+      "fetch": "調教データを取得",
+      "fetching": "取得中…",
+      "summary": "コミット{{commits}} / PR{{prs}} / レビュー{{reviews}} / Issue{{issues}}",
+      "status": {
+        "loading": "取得中…",
+        "notFound": "ユーザーが見つかりません",
+        "rateLimited": "GitHub の取得制限中です。しばらくしてから再試行してください",
+        "network": "取得に失敗しました",
+        "invalid": "ユーザー名の形式が正しくありません"
+      }
+    },
+    "bet": {
+      "pick": "{{name}}の単勝を買う",
+      "none": "新聞の「予想」から単勝で1頭選べます",
+      "current": "🎫 単勝予想: {{name}}（{{odds}}倍）",
+      "hit": "🎉 的中！ 単勝 {{odds}}倍（100円 → {{payout}}円）",
+      "miss": "ハズレ… 予想は {{name}}"
+    },
+    "result": {
+      "title": "確定",
+      "rank": "{{rank}}着",
+      "odds": "単勝{{odds}}倍・{{pop}}番人気",
+      "winner": "🏆 優勝"
+    },
+    "vision": {
+      "title": "ルーレット記念",
+      "result": "着順確定"
+    },
+    "commentary": {
+      "gate": "各馬ゲートに収まりました…",
+      "start": "スタートしました！",
+      "early": "まず先手を取ったのは{{name}}！",
+      "takeLead": "{{name}}が先頭に立った！",
+      "halfway": "中間地点、先頭{{first}}、2番手{{second}}、3番手{{third}}",
+      "stretch": "最後の直線！ 先頭は{{name}}！",
+      "surge": "{{name}}が外から猛然と追い込んでくる！",
+      "close": "{{first}}と{{second}}、並んだ並んだ！",
+      "finish": "{{name}}、いまゴールイン！",
+      "photo": "ほとんど並んでゴール！ 写真判定… 勝ったのは{{name}}！"
+    }
   }
 }

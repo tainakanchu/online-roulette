@@ -28,7 +28,8 @@
   "mode": {
     "roulette": "輪盤",
     "grouping": "分組",
-    "battle": "對戰"
+    "battle": "對戰",
+    "horseRace": "賽馬"
   },
   "grouping": {
     "groupCount": "組數:",
@@ -70,5 +71,104 @@
     "clear": "清除",
     "leading": "領先",
     "go": "GO!"
+  },
+  "race": {
+    "distance": "距離",
+    "meters": "{{meters}}米",
+    "categories": {
+      "sprint": "短途",
+      "mile": "一哩",
+      "intermediate": "中距離",
+      "long": "長途",
+      "extended": "超長途"
+    },
+    "start": "出閘！",
+    "reset": "返回閘廂",
+    "loading": "馬場準備中…",
+    "webglError": "你的瀏覽器不支援 3D 顯示，無法使用賽馬模式。",
+    "needTwo": "至少需要 2 匹馬才能出賽",
+    "overflow": "最多 {{max}} 匹馬出賽（{{count}} 匹退出）",
+    "fullscreen": "全螢幕",
+    "exitFullscreen": "離開全螢幕",
+    "remaining": "尚餘 {{meters}}米",
+    "goal": "衝線！",
+    "slowMotion": "SLOW",
+    "styles": {
+      "front": "領放",
+      "stalker": "前置",
+      "closer": "後上",
+      "deep": "包尾"
+    },
+    "card": {
+      "title": "輪盤馬經",
+      "raceName": "主賽事 · 輪盤盃 (G1)",
+      "course": "草地 {{meters}}米（{{category}}）",
+      "field": "{{count}} 匹出賽",
+      "headlines": {
+        "front": "本報首選{{name}}，望一放到底",
+        "stalker": "本報首選{{name}}，好位伺機突圍",
+        "closer": "本報首選{{name}}，直路後上搶閘",
+        "deep": "本報首選{{name}}，包尾大外疊強追"
+      },
+      "frame": "檔",
+      "number": "馬號",
+      "mark": "貼士",
+      "name": "馬名",
+      "style": "跑法",
+      "form": "近五仗",
+      "training": "晨操",
+      "rating": "評分",
+      "odds": "獨贏",
+      "bet": "投注",
+      "popularity": "第{{rank}}熱門",
+      "debut": "初出",
+      "note": "※ 評分根據近績及 GitHub 晨操資料計算。賠率為模擬估算，評分只會稍微影響賽果。",
+      "clearHistory": "重設戰績（{{count}} 場）",
+      "clearConfirm": "確定刪除所有賽事紀錄？"
+    },
+    "github": {
+      "title": "GitHub 晨操資料",
+      "description": "將 GitHub 用戶名連結到馬匹，即可把近 14 日的公開活動（commit、PR、review、issue）作為晨操評級反映在評分上。只讀取公開資料，每位用戶一次請求（快取 1 小時）。",
+      "placeholder": "GitHub 用戶名",
+      "fetch": "取得晨操資料",
+      "fetching": "取得中…",
+      "summary": "Commit {{commits}} / PR {{prs}} / Review {{reviews}} / Issue {{issues}}",
+      "status": {
+        "loading": "取得中…",
+        "notFound": "找不到用戶",
+        "rateLimited": "已達 GitHub 請求上限，請稍後再試",
+        "network": "取得失敗",
+        "invalid": "用戶名格式不正確"
+      }
+    },
+    "bet": {
+      "pick": "買{{name}}獨贏",
+      "none": "可在「投注」欄選一匹馬買獨贏",
+      "current": "🎫 獨贏：{{name}}（{{odds}}倍）",
+      "hit": "🎉 中咗！獨贏 {{odds}}倍（100 → {{payout}}）",
+      "miss": "落空… 你選了 {{name}}"
+    },
+    "result": {
+      "title": "賽果",
+      "rank": "第{{rank}}名",
+      "odds": "獨贏{{odds}}倍・第{{pop}}熱門",
+      "winner": "🏆 冠軍"
+    },
+    "vision": {
+      "title": "輪盤盃",
+      "result": "正式賽果"
+    },
+    "commentary": {
+      "gate": "各馬已經入閘…",
+      "start": "閘門打開，出閘！",
+      "early": "{{name}}率先搶到前列！",
+      "takeLead": "{{name}}走到最前！",
+      "halfway": "跑到一半，{{first}}領先，{{second}}第二，{{third}}第三",
+      "stretch": "轉入直路！{{name}}仍然領先！",
+      "surge": "{{name}}從外疊猛追上來！",
+      "close": "{{first}}同{{second}}，並排衝刺！",
+      "finish": "{{name}}衝過終點！",
+      "photo": "幾乎同時衝線！影相判定…勝出的是{{name}}！"
+    }
   }
 }

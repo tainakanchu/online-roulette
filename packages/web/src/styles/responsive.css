@@ -58,3 +58,16 @@
     font-size: 1.7rem;
   }
 }
+
+/* モードタブが 4 つになったので極小画面では詰める */
+@media screen and (max-width: 420px) {
+  .mode-switcher {
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .mode-switcher-tab {
+    font-size: 12px;
+    padding: 9px 4px;
+  }
+}

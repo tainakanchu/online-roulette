@@ -1,0 +1,947 @@
+.horse-race {
+  margin-top: 4px;
+}
+
+/* ===== Controls ===== */
+.race-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+}
+
+.race-distance {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+.race-distance-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.race-distance-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.race-distance-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.race-distance-category {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1d0f3d;
+  border-radius: 999px;
+}
+
+/* SMILE 区分ごとの色（スライダーのトラックと揃える） */
+.race-distance-category--sprint {
+  background: #ff8a65;
+}
+.race-distance-category--mile {
+  background: #ffd23f;
+}
+.race-distance-category--intermediate {
+  background: #7ee081;
+}
+.race-distance-category--long {
+  background: #4fc3f7;
+}
+.race-distance-category--extended {
+  background: #b39ddb;
+}
+
+.race-distance-slider {
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 1000〜3600m のうち、1300 / 1900 / 2100 / 2700m で区分が変わる */
+.race-distance-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #ff8a65 0 11.5%,
+    #ffd23f 11.5% 34.6%,
+    #7ee081 34.6% 42.3%,
+    #4fc3f7 42.3% 65.4%,
+    #b39ddb 65.4% 100%
+  );
+}
+
+.race-distance-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #ff8a65 0 11.5%,
+    #ffd23f 11.5% 34.6%,
+    #7ee081 34.6% 42.3%,
+    #4fc3f7 42.3% 65.4%,
+    #b39ddb 65.4% 100%
+  );
+}
+
+.race-distance-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -7px;
+  border: 3px solid #1d0f3d;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.race-distance-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #1d0f3d;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.race-distance-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.race-distance-presets {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.race-distance-preset {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.race-distance-preset.is-active {
+  color: #1d0f3d;
+  background: #ffd23f;
+  border-color: #ffd23f;
+}
+
+.race-distance-preset:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.race-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.race-start-button,
+.race-reset-button {
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.race-start-button {
+  background: linear-gradient(135deg, #2e9d47, #ffb300);
+  box-shadow: 0 4px 16px rgba(255, 179, 0, 0.3);
+}
+
+.race-start-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.race-reset-button {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.race-start-button:disabled,
+.race-reset-button:disabled {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+}
+
+.race-notice {
+  margin: -6px 0 12px;
+  font-size: 13px;
+  color: #ffd23f;
+}
+
+/* ===== 3D Stage ===== */
+.race-stage-wrap {
+  position: relative;
+  /* コンテナより少し横に張り出して迫力を出す */
+  margin: 0 -12px;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #0b1424;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 18px 50px rgba(0, 0, 0, 0.45);
+  isolation: isolate;
+}
+
+.race-stage-wrap.is-fullscreen {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+
+.race-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.race-stage-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* シネマ風のビネット */
+.race-stage-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
+  z-index: 1;
+}
+
+.race-stage-loading,
+.race-stage-error,
+.race-stage-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+  z-index: 3;
+}
+
+.race-stage-message {
+  inset: auto 0 18px;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.race-hud-order {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 56px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  z-index: 2;
+}
+
+.race-hud-chip {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  border-radius: 6px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease;
+}
+
+.race-hud-chip:first-child {
+  transform: scale(1.12);
+  outline: 2px solid #ffd23f;
+}
+
+.race-hud-remaining {
+  position: absolute;
+  top: 44px;
+  left: 10px;
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: rgba(10, 8, 25, 0.65);
+  border-left: 3px solid #ffd23f;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.race-fullscreen-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  color: #fff;
+  background: rgba(10, 8, 25, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.race-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(64px, 16vw, 140px);
+  font-weight: 800;
+  color: #ffd23f;
+  text-shadow:
+    0 0 24px rgba(255, 210, 63, 0.6),
+    0 6px 20px rgba(0, 0, 0, 0.6);
+  z-index: 4;
+  animation: raceCountPop 0.7s ease-out;
+  pointer-events: none;
+}
+
+@keyframes raceCountPop {
+  0% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.9;
+  }
+}
+
+.race-slowmo {
+  position: absolute;
+  top: 44px;
+  right: 10px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+  background: rgba(211, 47, 47, 0.85);
+  border-radius: 4px;
+  z-index: 2;
+  animation: raceBlink 0.8s steps(2) infinite;
+}
+
+@keyframes raceBlink {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.race-photo-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: 5;
+  pointer-events: none;
+  animation: raceFlash 0.7s ease-out forwards;
+}
+
+@keyframes raceFlash {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.race-commentary {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(198, 40, 40, 0.92), rgba(10, 8, 25, 0.8) 30%);
+  border-radius: 8px;
+  z-index: 2;
+}
+
+.race-commentary-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: raceSlideIn 0.35s ease-out;
+}
+
+@keyframes raceSlideIn {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.race-result-overlay {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: min(300px, 70%);
+  padding: 14px;
+  color: #fff;
+  background: rgba(10, 8, 25, 0.78);
+  border: 1px solid rgba(255, 210, 63, 0.5);
+  border-radius: 14px;
+  backdrop-filter: blur(4px);
+  z-index: 3;
+  animation: raceSlideIn 0.4s ease-out;
+}
+
+.race-result-title {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #ffd23f;
+}
+
+.race-result-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.race-result-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-areas:
+    "rank num name"
+    "rank num odds";
+  column-gap: 8px;
+  align-items: center;
+}
+
+.race-result-rank {
+  grid-area: rank;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.race-result-row--1 .race-result-rank {
+  color: #ffd23f;
+}
+
+.race-result-row .race-card-number {
+  grid-area: num;
+}
+
+.race-result-name {
+  grid-area: name;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.race-result-row--1 .race-result-name {
+  font-size: 18px;
+}
+
+.race-result-odds {
+  grid-area: odds;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.race-result-bet {
+  margin-top: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.race-result-bet.is-hit {
+  color: #1d0f3d;
+  background: #ffd23f;
+}
+
+.race-result-bet.is-miss {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.race-winner {
+  margin-top: 16px;
+}
+
+.race-bet-summary {
+  margin: 16px 0 10px;
+  font-size: 14px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ===== 競馬新聞 ===== */
+.race-card {
+  --paper: #f6f0e1;
+  --ink: #1b1b1b;
+  --red: #c62828;
+  color: var(--ink);
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.018) 0 2px, transparent 2px 4px),
+    var(--paper);
+  border-radius: 6px;
+  padding: 14px 12px 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", "Noto Serif TC", serif;
+  transform: rotate(-0.4deg);
+}
+
+.race-card-masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding-bottom: 6px;
+  border-bottom: 3px double var(--ink);
+}
+
+.race-card-masthead-title {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: var(--red);
+}
+
+.race-card-masthead-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.race-card-headline {
+  margin: 8px 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.race-card-table-wrap {
+  /* 表の最小幅でページ全体（flex のコンテナ）が押し広げられないようにする */
+  width: 0;
+  min-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.race-card-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.race-card-table th {
+  padding: 4px 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--ink);
+}
+
+.race-card-table td {
+  padding: 5px 3px;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+.race-card-table tr.is-bet td {
+  background: rgba(255, 210, 63, 0.35);
+}
+
+.race-card-col-name {
+  text-align: left !important;
+  max-width: 130px;
+}
+
+.race-card-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.race-card-pop {
+  font-size: 10px;
+  color: #555;
+}
+
+.race-card-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid #333;
+}
+
+.race-card-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 3px;
+  font-family: Fredoka, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  border-radius: 50%;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.race-card-mark {
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--red);
+}
+
+.race-card-style {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.race-card-form {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.race-card-finish {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid #999;
+}
+
+.race-card-finish--1 {
+  color: #fff;
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.race-card-finish--2 {
+  color: #fff;
+  background: #1e63d6;
+  border-color: #1e63d6;
+}
+
+.race-card-finish--3 {
+  color: #fff;
+  background: #2e9d47;
+  border-color: #2e9d47;
+}
+
+.race-card-debut,
+.race-card-muted {
+  font-size: 11px;
+  color: #777;
+}
+
+.race-card-grade {
+  display: inline-block;
+  min-width: 22px;
+  font-size: 13px;
+  font-weight: 900;
+  border-radius: 3px;
+}
+
+.race-card-grade--S {
+  color: #fff;
+  background: var(--red);
+}
+
+.race-card-grade--A {
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+
+.race-card-grade--B {
+  color: #1e63d6;
+}
+
+.race-card-grade--C,
+.race-card-grade--D {
+  color: #666;
+}
+
+.race-card-rating {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.race-card-odds {
+  font-size: 14px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.race-card-bet {
+  width: 30px;
+  height: 26px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.race-card-bet.is-selected {
+  background: #ffd23f;
+}
+
+.race-card-bet:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.race-card-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #555;
+}
+
+.race-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.race-card-link {
+  padding: 4px 0;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--ink);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.race-card-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.race-github {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px dashed rgba(0, 0, 0, 0.35);
+}
+
+.race-github-desc {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.race-github-list {
+  display: grid;
+  gap: 6px;
+}
+
+.race-github-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "name input"
+    "status status";
+  align-items: center;
+  gap: 2px 8px;
+}
+
+.race-github-name {
+  grid-area: name;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.race-github-input {
+  grid-area: input;
+  min-width: 0;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #999;
+  border-radius: 4px;
+}
+
+.race-github-status {
+  grid-area: status;
+  font-size: 11px;
+  color: #555;
+  text-align: right;
+}
+
+.race-github-status:empty {
+  display: none;
+}
+
+.race-github-fetch {
+  margin-top: 10px;
+  width: 100%;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #fff;
+  background: #24292f;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.race-github-fetch:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media screen and (max-width: 560px) {
+  .race-stage-wrap {
+    margin: 0 -8px;
+    aspect-ratio: 4 / 3.4;
+  }
+
+  .race-controls {
+    justify-content: center;
+  }
+
+  .race-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .race-distance-presets {
+    gap: 3px;
+  }
+
+  .race-commentary {
+    font-size: 13px;
+  }
+
+  .race-result-overlay {
+    top: auto;
+    bottom: 54px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    padding: 8px 10px;
+    transform: none;
+  }
+
+  .race-result-title {
+    margin-bottom: 4px;
+  }
+
+  .race-result-list {
+    gap: 2px;
+  }
+
+  .race-result-row {
+    grid-template-areas: "rank num name";
+  }
+
+  .race-result-odds {
+    display: none;
+  }
+
+  .race-result-row--1 .race-result-name {
+    font-size: 15px;
+  }
+
+  .race-result-bet {
+    margin-top: 6px;
+    padding: 4px 8px;
+  }
+
+  .race-card {
+    transform: none;
+  }
+}
