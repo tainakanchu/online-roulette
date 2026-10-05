@@ -285,6 +285,7 @@ export class RaceScene {
   private finishPhoto: HTMLCanvasElement | null = null;
   private finishPhotoPending = false;
   private callbacks: RaceCallbacks = {};
+  private frameListener: ((canvas: HTMLCanvasElement) => void) | null = null;
   private shot: Shot = "idle";
   private shotTime = 0;
   private lastTickAt = 0;
@@ -417,6 +418,11 @@ export class RaceScene {
     if (this.finishPhoto) return this.finishPhoto;
     this.composer.render();
     return this.snapshot();
+  }
+
+  /** 描画直後のキャンバスを毎フレーム受け取る（録画用） */
+  setFrameListener(listener: ((canvas: HTMLCanvasElement) => void) | null) {
+    this.frameListener = listener;
   }
 
   /** preserveDrawingBuffer なしでも読めるよう、描画直後に 2D キャンバスへ写す */
@@ -560,6 +566,7 @@ export class RaceScene {
     this.time += dt;
     this.update(dt);
     this.composer.render();
+    this.frameListener?.(this.renderer.domElement);
     if (this.finishPhotoPending) {
       this.finishPhotoPending = false;
       this.finishPhoto = this.snapshot();

@@ -157,6 +157,10 @@
       "odds": "{{odds}}x · Favorit #{{pop}}",
       "winner": "🏆 Juara"
     },
+    "video": {
+      "save": "Simpan video",
+      "downloaded": "Video balapan berhasil diunduh!"
+    },
     "vision": {
       "title": "Roulette Stakes",
       "result": "Hasil resmi"

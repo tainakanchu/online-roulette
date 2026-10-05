@@ -532,6 +532,18 @@
   margin-top: 16px;
 }
 
+.race-video-button {
+  margin-top: 12px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1d0f3d;
+  background: #ffd23f;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
 .race-bet-summary {
   margin: 16px 0 10px;
   font-size: 14px;

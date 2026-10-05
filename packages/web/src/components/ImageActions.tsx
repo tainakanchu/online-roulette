@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { copyImageToClipboard, downloadImage } from "../utils/imageUtils";
+import { buildFilename, copyImageToClipboard, downloadImage } from "../utils/imageUtils";
 
 interface ImageActionsProps {
   /** コピー/ダウンロードするPNGのBlobを生成する */
@@ -12,14 +12,6 @@ interface ImageActionsProps {
   /** 配置調整用の追加クラス（未指定なら従来どおり右上に絶対配置） */
   className?: string;
 }
-
-const buildFilename = (prefix: string): string => {
-  const now = new Date();
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${prefix}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
-    now.getDate()
-  )}-${pad(now.getHours())}${pad(now.getMinutes())}.png`;
-};
 
 export const ImageActions: React.FC<ImageActionsProps> = ({
   getBlob,

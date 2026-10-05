@@ -157,6 +157,10 @@
       "odds": "獨贏{{odds}}倍・第{{pop}}熱門",
       "winner": "🏆 冠軍"
     },
+    "video": {
+      "save": "儲存影片",
+      "downloaded": "已下載賽事片段！"
+    },
     "vision": {
       "title": "輪盤盃",
       "result": "正式賽果"
