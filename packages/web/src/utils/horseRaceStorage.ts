@@ -8,6 +8,8 @@ import { readLocalStorage, writeLocalStorage } from "./localStorage";
 
 const HISTORY_KEY = "roulette-horse-race-history";
 const DISTANCE_KEY = "roulette-horse-race-distance";
+const RACE_NAME_KEY = "roulette-horse-race-name";
+const RACE_GRADE_KEY = "roulette-horse-race-grade";
 const LOGINS_KEY = "roulette-horse-race-github-logins";
 const ACTIVITY_KEY = "roulette-horse-race-github-activity";
 
@@ -58,6 +60,32 @@ export const loadDistance = (): number =>
 
 export const saveDistance = (meters: number) => {
   writeLocalStorage(DISTANCE_KEY, String(meters));
+};
+
+// ----- レース名（ユーザー入力のみ保存。空ならローカライズ済みの既定名を使う） -----
+
+export const MAX_RACE_NAME_LENGTH = 30;
+
+export const normalizeRaceName = (value: string): string =>
+  value.trim().slice(0, MAX_RACE_NAME_LENGTH).trim();
+
+export const loadRaceName = (): string => normalizeRaceName(readLocalStorage(RACE_NAME_KEY) ?? "");
+
+export const saveRaceName = (name: string) => {
+  writeLocalStorage(RACE_NAME_KEY, name);
+};
+
+/** 格付け（空文字は格付けなし） */
+export const RACE_GRADES = ["G1", "G2", "G3", "OP", ""] as const;
+export type RaceGrade = (typeof RACE_GRADES)[number];
+
+export const loadRaceGrade = (): RaceGrade => {
+  const value = readLocalStorage(RACE_GRADE_KEY);
+  return RACE_GRADES.find((grade) => grade === value) ?? "G1";
+};
+
+export const saveRaceGrade = (grade: RaceGrade) => {
+  writeLocalStorage(RACE_GRADE_KEY, grade);
 };
 
 // ----- GitHub 連携（馬名 → GitHub ユーザー名） -----

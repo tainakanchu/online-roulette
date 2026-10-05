@@ -32,7 +32,7 @@ interface HorseRaceModeProps {
 export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNotify }) => {
   const { t, i18n } = useTranslation();
   const card = useRaceCard(options);
-  const { entries, distance } = card;
+  const { entries, distance, raceName, raceGrade } = card;
 
   const stageRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<RaceScene | null>(null);
@@ -141,7 +141,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     } else {
       const byPopularity = [...entries].sort((a, b) => a.popularity - b.popularity);
       scene.setVision({
-        title: t("race.vision.title"),
+        title: `${raceName || t("race.vision.title")}${raceGrade ? ` (${raceGrade})` : ""}`,
         subtitle: distanceLabel,
         rows:
           phase === "idle"
@@ -149,7 +149,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
             : rowsFor(entries.map((e) => e.index)),
       });
     }
-  }, [entries, phase, outcome, distanceLabel, t, sceneReady]);
+  }, [entries, phase, outcome, distanceLabel, raceName, raceGrade, t, sceneReady]);
 
   // ----- レース進行 -----
   const start = useCallback(() => {
@@ -414,6 +414,10 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
       <RaceCard
         entries={entries}
         distance={distance}
+        raceName={raceName}
+        onRaceNameChange={card.setRaceName}
+        raceGrade={raceGrade}
+        onRaceGradeChange={card.setRaceGrade}
         bet={bet}
         onBet={setBet}
         locked={locked}

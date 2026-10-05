@@ -1,7 +1,8 @@
-import { type FC, memo, useState } from "react";
+import { type FC, memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { activityScore, distanceCategory } from "@tainakanchu/roulette-core";
 import type { GitHubStatus, RaceEntry } from "../../hooks/useRaceCard";
+import { MAX_RACE_NAME_LENGTH, RACE_GRADES, type RaceGrade } from "../../utils/horseRaceStorage";
 import { frameNumber } from "../../utils/raceFrame";
 
 // JRA の枠色（1 白 2 黒 3 赤 4 青 5 黄 6 緑 7 橙 8 桃）
@@ -30,6 +31,11 @@ interface RaceCardProps {
   entries: RaceEntry[];
   /** 距離（m） */
   distance: number;
+  /** ユーザー入力のレース名（未入力なら空文字） */
+  raceName: string;
+  onRaceNameChange: (name: string) => void;
+  raceGrade: RaceGrade;
+  onRaceGradeChange: (grade: RaceGrade) => void;
   bet: number | null;
   onBet: (index: number | null) => void;
   locked: boolean;
@@ -45,6 +51,10 @@ interface RaceCardProps {
 export const RaceCard: FC<RaceCardProps> = memo(function RaceCard({
   entries,
   distance,
+  raceName,
+  onRaceNameChange,
+  raceGrade,
+  onRaceGradeChange,
   bet,
   onBet,
   locked,
@@ -57,6 +67,9 @@ export const RaceCard: FC<RaceCardProps> = memo(function RaceCard({
 }) {
   const { t } = useTranslation();
   const [showGitHub, setShowGitHub] = useState(false);
+  const defaultRaceName = t("race.vision.title");
+  const [draftName, setDraftName] = useState(raceName);
+  useEffect(() => setDraftName(raceName), [raceName]);
   const favorite = entries.find((e) => e.mark === "◎");
   const fieldSize = entries.length;
   const category = t(`race.categories.${distanceCategory(distance)}`);
@@ -67,7 +80,47 @@ export const RaceCard: FC<RaceCardProps> = memo(function RaceCard({
       <header className="race-card-masthead">
         <div className="race-card-masthead-title">{t("race.card.title")}</div>
         <div className="race-card-masthead-meta">
-          <span>{t("race.card.raceName")}</span>
+          <span className="race-card-racename">
+            {t("race.card.raceNamePrefix")}
+            <label className="race-card-racename-field" title={t("race.card.raceNameLabel")}>
+              <input
+                type="text"
+                className="race-card-racename-input"
+                value={draftName}
+                placeholder={defaultRaceName}
+                maxLength={MAX_RACE_NAME_LENGTH}
+                disabled={locked}
+                aria-label={t("race.card.raceNameLabel")}
+                onChange={(e) => setDraftName(e.target.value)}
+                onBlur={() => onRaceNameChange(draftName)}
+                onKeyDown={(e) => {
+                  // IME の変換確定の Enter では確定しない（Safari は keyCode 229）
+                  if (e.key !== "Enter" || e.nativeEvent.isComposing || e.keyCode === 229) return;
+                  e.currentTarget.blur();
+                }}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <span className="race-card-racename-icon" aria-hidden="true">
+                ✎
+              </span>
+            </label>
+            <span className="race-card-grade-wrap">
+              <select
+                className={`race-card-grade race-card-grade--${raceGrade || "none"}`}
+                value={raceGrade}
+                disabled={locked}
+                aria-label={t("race.card.gradeLabel")}
+                onChange={(e) => onRaceGradeChange(e.target.value as RaceGrade)}
+              >
+                {RACE_GRADES.map((grade) => (
+                  <option key={grade || "none"} value={grade}>
+                    {grade || t("race.card.gradeNone")}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </span>
           <span>
             {t("race.card.course", { meters: distance, category })} · {t("race.card.field", { count: fieldSize })}
           </span>

@@ -101,7 +101,10 @@
     },
     "card": {
       "title": "輪盤賽馬報",
-      "raceName": "主賽事 · 輪盤盃 (G1)",
+      "raceNamePrefix": "主賽事 ·",
+      "raceNameLabel": "賽事名稱",
+      "gradeLabel": "級別",
+      "gradeNone": "無",
       "course": "草地 {{meters}}公尺（{{category}}）",
       "field": "{{count}} 匹出賽",
       "headlines": {
