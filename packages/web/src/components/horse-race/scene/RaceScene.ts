@@ -279,6 +279,9 @@ export class RaceScene {
   private winnerCrossed = false;
   private postFinishTime = 0;
   private completed = false;
+  /** 勝ち馬がゴール線を越えた瞬間のフレーム（結果画像用） */
+  private finishPhoto: HTMLCanvasElement | null = null;
+  private finishPhotoPending = false;
   private callbacks: RaceCallbacks = {};
   private shot: Shot = "idle";
   private shotTime = 0;
@@ -392,6 +395,7 @@ export class RaceScene {
     this.winnerCrossed = false;
     this.postFinishTime = 0;
     this.completed = false;
+    this.finishPhoto = null;
     this.callbacks = callbacks;
     this.focusX = this.startX;
     this.gate?.open();
@@ -406,14 +410,21 @@ export class RaceScene {
     this.setShot("idle", true, true);
   }
 
-  async capture(): Promise<Blob> {
+  /** ゴールの瞬間のフレーム。レース前なら現在のフレームを返す */
+  getFinishPhoto(): HTMLCanvasElement {
+    if (this.finishPhoto) return this.finishPhoto;
     this.composer.render();
-    return new Promise((resolve, reject) => {
-      this.renderer.domElement.toBlob((blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error("Failed to capture race"));
-      }, "image/png");
-    });
+    return this.snapshot();
+  }
+
+  /** preserveDrawingBuffer なしでも読めるよう、描画直後に 2D キャンバスへ写す */
+  private snapshot(): HTMLCanvasElement {
+    const source = this.renderer.domElement;
+    const canvas = document.createElement("canvas");
+    canvas.width = source.width;
+    canvas.height = source.height;
+    canvas.getContext("2d")?.drawImage(source, 0, 0);
+    return canvas;
   }
 
   dispose() {
@@ -446,6 +457,8 @@ export class RaceScene {
     this.race = null;
     this.winnerCrossed = false;
     this.completed = false;
+    this.finishPhoto = null;
+    this.finishPhotoPending = false;
     this.slowMotion = false;
     this.timeScale = 1;
     this.excitement = 0;
@@ -545,6 +558,10 @@ export class RaceScene {
     this.time += dt;
     this.update(dt);
     this.composer.render();
+    if (this.finishPhotoPending) {
+      this.finishPhotoPending = false;
+      this.finishPhoto = this.snapshot();
+    }
   };
 
   /** 馬のレース内部での位置（単位） */
@@ -614,6 +631,7 @@ export class RaceScene {
         this.excitement = 1;
         this.callbacks.onWinnerCross?.();
         this.setShot("finish");
+        this.finishPhotoPending = true;
       }
       if (this.winnerCrossed) {
         this.postFinishTime += realDt;

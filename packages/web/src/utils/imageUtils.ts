@@ -481,3 +481,187 @@ export const generateGroupResultImage = ({
 
   return canvasToBlob(canvas);
 };
+
+/* =========================================================================
+ * 競馬モードの結果画像
+ * ========================================================================= */
+
+export interface HorseRaceImageRow {
+  number: number;
+  name: string;
+  color: string;
+  /** 着順・枠番以外の補足（単勝オッズ・人気など） */
+  detail: string;
+}
+
+export interface HorseRaceImageLabels {
+  /** 画像上部のサブタイトル（モード名・距離） */
+  title: string;
+  winnerLabel: string;
+  /** 着順のラベル (e.g. "1着") */
+  rank: (rank: number) => string;
+}
+
+const RACE_PHOTO_HEIGHT = 300;
+const RACE_ROW_STEP = 34;
+const RACE_CHIP_SIZE = 24;
+
+/** 枠番の色チップ（番号入り）を描画する */
+const drawNumberChip = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  centerY: number,
+  size: number,
+  number: number,
+  color: string
+): void => {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.roundRect(x, centerY - size / 2, size, size, 6);
+  ctx.fill();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = getColorBrightness(color) > 128 ? "#1a1330" : "#ffffff";
+  ctx.font = `bold ${Math.round(size * 0.6)}px sans-serif`;
+  ctx.fillText(String(number), x + size / 2, centerY + 1);
+  ctx.textBaseline = "alphabetic";
+};
+
+export const generateHorseRaceResultImage = ({
+  photo,
+  rows,
+  betResult,
+  betHit,
+  labels,
+  language,
+}: {
+  /** ゴールの瞬間の3Dシーン */
+  photo: HTMLCanvasElement;
+  /** 着順に並んだ出走馬 */
+  rows: HorseRaceImageRow[];
+  /** 予想の的中/ハズレ文言（予想なしなら undefined） */
+  betResult?: string;
+  betHit: boolean;
+  labels: HorseRaceImageLabels;
+  language: string;
+}): Promise<Blob> => {
+  const width = IMAGE_WIDTH;
+  const contentWidth = width - IMAGE_PADDING * 2;
+  const headerHeight = 88;
+  const winnerCardHeight = 92;
+  const betHeight = betResult ? 52 : 0;
+  const footerHeight = 46;
+  const photoY = headerHeight;
+  const cardY = photoY + RACE_PHOTO_HEIGHT + 16;
+  const rowsY = cardY + winnerCardHeight + 18;
+  const height =
+    rowsY + rows.length * RACE_ROW_STEP + betHeight + footerHeight;
+
+  const { canvas, ctx } = createScaledCanvas(width, height);
+
+  drawBackground(ctx, width, height);
+  drawHeader(ctx, width, labels.title);
+
+  // ゴールの瞬間（枠に合わせて中央をトリミング）
+  const scale = Math.max(contentWidth / photo.width, RACE_PHOTO_HEIGHT / photo.height);
+  const srcWidth = contentWidth / scale;
+  const srcHeight = RACE_PHOTO_HEIGHT / scale;
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(IMAGE_PADDING, photoY, contentWidth, RACE_PHOTO_HEIGHT, 16);
+  ctx.clip();
+  ctx.drawImage(
+    photo,
+    (photo.width - srcWidth) / 2,
+    (photo.height - srcHeight) / 2,
+    srcWidth,
+    srcHeight,
+    IMAGE_PADDING,
+    photoY,
+    contentWidth,
+    RACE_PHOTO_HEIGHT
+  );
+  ctx.restore();
+
+  // 勝者カード
+  const winner = rows[0];
+  ctx.fillStyle = "rgba(255, 210, 63, 0.16)";
+  ctx.strokeStyle = "rgba(255, 210, 63, 0.45)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(IMAGE_PADDING, cardY, contentWidth, winnerCardHeight, 16);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = ACCENT;
+  ctx.font = "bold 14px sans-serif";
+  ctx.fillText(labels.winnerLabel, width / 2, cardY + 28);
+
+  if (winner) {
+    const chipSize = 30;
+    const gap = 12;
+    ctx.font = "bold 28px sans-serif";
+    const name = fitText(ctx, winner.name, contentWidth - 60 - chipSize - gap);
+    const blockWidth = chipSize + gap + ctx.measureText(name).width;
+    const startX = (width - blockWidth) / 2;
+    const centerY = cardY + 62;
+    drawNumberChip(ctx, startX, centerY, chipSize, winner.number, winner.color);
+    ctx.textAlign = "left";
+    ctx.fillStyle = TEXT_MAIN;
+    ctx.font = "bold 28px sans-serif";
+    ctx.fillText(name, startX + chipSize + gap, centerY + 10);
+  }
+
+  // 着順
+  const rankWidth = 48;
+  const chipX = IMAGE_PADDING + rankWidth;
+  const nameX = chipX + RACE_CHIP_SIZE + 12;
+  const detailWidth = 200;
+  rows.forEach((row, i) => {
+    const centerY = rowsY + i * RACE_ROW_STEP + RACE_ROW_STEP / 2;
+    const isWinner = i === 0;
+
+    if (i % 2 === 0) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+      ctx.fillRect(IMAGE_PADDING, centerY - RACE_ROW_STEP / 2, contentWidth, RACE_ROW_STEP);
+    }
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = isWinner ? ACCENT : TEXT_MAIN;
+    const medal = MEDALS[i];
+    ctx.font = medal ? "20px sans-serif" : "bold 15px sans-serif";
+    ctx.fillText(medal ?? labels.rank(i + 1), IMAGE_PADDING + 8, centerY + 5);
+
+    drawNumberChip(ctx, chipX, centerY, RACE_CHIP_SIZE, row.number, row.color);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = isWinner ? ACCENT : TEXT_MAIN;
+    ctx.font = isWinner ? "bold 15px sans-serif" : "15px sans-serif";
+    ctx.fillText(
+      fitText(ctx, row.name, width - IMAGE_PADDING - detailWidth - nameX - 8),
+      nameX,
+      centerY + 5
+    );
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = TEXT_SUB;
+    ctx.font = "13px sans-serif";
+    ctx.fillText(fitText(ctx, row.detail, detailWidth), width - IMAGE_PADDING - 8, centerY + 5);
+  });
+
+  if (betResult) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = betHit ? ACCENT : TEXT_SUB;
+    ctx.font = betHit ? "bold 16px sans-serif" : "15px sans-serif";
+    ctx.fillText(
+      fitText(ctx, betResult, contentWidth),
+      width / 2,
+      rowsY + rows.length * RACE_ROW_STEP + 32
+    );
+  }
+
+  drawFooter(ctx, width, height, language);
+
+  return canvasToBlob(canvas);
+};
