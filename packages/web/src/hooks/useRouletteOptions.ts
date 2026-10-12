@@ -117,10 +117,11 @@ export const useRouletteOptions = ({
 
   const handleNewOptionKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addOption();
-      }
+      // 日本語入力（IME）の変換を確定する Enter では追加しない（変換中は isComposing、Safari などは keyCode 229）
+      const isComposing = e.nativeEvent.isComposing || e.keyCode === 229;
+      if (e.key !== "Enter" || isComposing) return;
+      e.preventDefault();
+      addOption();
     },
     [addOption],
   );
