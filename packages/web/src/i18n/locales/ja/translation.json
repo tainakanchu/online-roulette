@@ -82,6 +82,29 @@
       "long": "長距離",
       "extended": "超長距離"
     },
+    "course": {
+      "surface": "コース",
+      "going": "馬場",
+      "surfaces": {
+        "turf": "芝",
+        "dirt": "ダート"
+      },
+      "goings": {
+        "turf": {
+          "firm": "良",
+          "good": "稍重",
+          "yielding": "重",
+          "soft": "不良"
+        },
+        "dirt": {
+          "firm": "良",
+          "good": "稍重",
+          "yielding": "重",
+          "soft": "不良"
+        }
+      }
+    },
+    "courseLabel": "{{surface}} {{meters}}m {{category}}・{{going}}",
     "start": "出走！",
     "reset": "ゲートに戻す",
     "loading": "競馬場を準備中…",
@@ -105,7 +128,7 @@
       "raceNameLabel": "レース名",
       "gradeLabel": "格付け",
       "gradeNone": "なし",
-      "course": "芝 {{meters}}m（{{category}}）",
+      "course": "{{surface}} {{meters}}m（{{category}}）・{{going}}",
       "field": "{{count}}頭立て",
       "headlines": {
         "front": "{{name}}が本紙◎。ハナを切って逃げ切りを狙う",
@@ -127,7 +150,13 @@
       "debut": "初出走",
       "note": "※ 能力は近走成績と GitHub 調教データから算出。オッズはシミュレーションによる推定値です。能力差は勝敗に少しだけ影響します。",
       "clearHistory": "戦績をリセット（{{count}}レース）",
-      "clearConfirm": "これまでの戦績をすべて削除しますか？"
+      "clearConfirm": "これまでの戦績をすべて削除しますか？",
+      "wind": "風 {{speed}}m/s（直線{{stretch}}）",
+      "windStretch": {
+        "tailwind": "追い風",
+        "headwind": "向かい風",
+        "crosswind": "横風"
+      }
     },
     "github": {
       "title": "GitHub 調教データ",
@@ -163,7 +192,18 @@
     },
     "vision": {
       "title": "ルーレット記念",
-      "result": "着順確定"
+      "racePrefix": "第",
+      "raceSuffix": "レース",
+      "time": "タイム",
+      "going": "馬場",
+      "official": "確定",
+      "photo": "写真",
+      "live": "ルーレット実況",
+      "nose": "ハナ",
+      "head": "アタマ",
+      "neck": "クビ",
+      "distance": "大差",
+      "photoFinish": "写真判定"
     },
     "commentary": {
       "gate": "各馬ゲートに収まりました…",

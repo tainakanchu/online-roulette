@@ -158,6 +158,65 @@
   opacity: 0.6;
 }
 
+/* ===== Course (surface / going) ===== */
+.race-course {
+  display: flex;
+  flex: 1 1 260px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.race-course-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.race-course-label {
+  flex: 0 0 3.6em;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.race-course-option {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.race-course-option.is-active {
+  color: #1d0f3d;
+  background: #ffd23f;
+  border-color: #ffd23f;
+}
+
+.race-course-option--turf.is-active {
+  color: #fff;
+  background: #2e9d47;
+  border-color: #2e9d47;
+}
+
+.race-course-option--dirt.is-active {
+  color: #fff;
+  background: #a0703f;
+  border-color: #a0703f;
+}
+
+.race-course-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .race-actions {
   display: flex;
   gap: 8px;
@@ -327,6 +386,61 @@
   border-radius: 10px;
   cursor: pointer;
   z-index: 3;
+}
+
+/* シネマスコープ風の黒帯（16:10 のステージを 2:1 ほどの横長の画にする）。後ろに並ぶ実況の帯や着順のチップより下に描く */
+.race-letterbox {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.race-letterbox::before,
+.race-letterbox::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: #000;
+  transition: height 0.9s ease;
+}
+
+.race-letterbox::before {
+  top: 0;
+}
+
+.race-letterbox::after {
+  bottom: 0;
+}
+
+.race-letterbox.is-active::before,
+.race-letterbox.is-active::after {
+  height: 11%;
+}
+
+/* 全画面のときだけ、ステージの右下（実況の帯の上）に出す出走ボタン */
+.race-stage-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 64px;
+  display: flex;
+  gap: 8px;
+  z-index: 3;
+}
+
+.race-stage-actions button {
+  min-width: 112px;
+  padding: 10px 18px;
+  font-size: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* 明るい空の上でも読めるよう、ゲートに戻すボタンには暗い下地を敷く */
+.race-stage-actions .race-reset-button {
+  background: rgba(10, 8, 25, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .race-countdown {

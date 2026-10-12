@@ -82,6 +82,29 @@
       "long": "Long",
       "extended": "Extended"
     },
+    "course": {
+      "surface": "Course",
+      "going": "Going",
+      "surfaces": {
+        "turf": "Turf",
+        "dirt": "Dirt"
+      },
+      "goings": {
+        "turf": {
+          "firm": "Firm",
+          "good": "Good",
+          "yielding": "Yielding",
+          "soft": "Soft"
+        },
+        "dirt": {
+          "firm": "Standard",
+          "good": "Good",
+          "yielding": "Muddy",
+          "soft": "Sloppy"
+        }
+      }
+    },
+    "courseLabel": "{{surface}} {{meters}}m {{category}} · {{going}}",
     "start": "And they're off!",
     "reset": "Back to gate",
     "loading": "Preparing the racecourse…",
@@ -105,7 +128,7 @@
       "raceNameLabel": "Race name",
       "gradeLabel": "Grade",
       "gradeNone": "None",
-      "course": "Turf {{meters}}m ({{category}})",
+      "course": "{{surface}} {{meters}}m ({{category}}) · {{going}}",
       "field": "{{count}} runners",
       "headlines": {
         "front": "Top pick: {{name}}, looking to lead all the way",
@@ -127,7 +150,13 @@
       "debut": "Debut",
       "note": "* Rating is based on recent form and GitHub workout data. Odds are estimated by simulation. Ratings only slightly affect the outcome.",
       "clearHistory": "Reset form ({{count}} races)",
-      "clearConfirm": "Delete all race history?"
+      "clearConfirm": "Delete all race history?",
+      "wind": "Wind {{speed}}m/s ({{stretch}} in the straight)",
+      "windStretch": {
+        "tailwind": "tailwind",
+        "headwind": "headwind",
+        "crosswind": "crosswind"
+      }
     },
     "github": {
       "title": "GitHub workout data",
@@ -163,7 +192,18 @@
     },
     "vision": {
       "title": "Roulette Stakes",
-      "result": "Official result"
+      "racePrefix": "Race ",
+      "raceSuffix": "",
+      "time": "Time",
+      "going": "Going",
+      "official": "Official",
+      "photo": "Photo",
+      "live": "LIVE",
+      "nose": "Nose",
+      "head": "Head",
+      "neck": "Neck",
+      "distance": "Dist.",
+      "photoFinish": "PHOTO FINISH"
     },
     "commentary": {
       "gate": "All horses are in the gate…",

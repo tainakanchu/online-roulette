@@ -4,6 +4,7 @@ import { distanceCategory, raceTarget, simulateHorseRace } from "@tainakanchu/ro
 import { useRaceCard, type RaceEntry } from "../../hooks/useRaceCard";
 import { buildFilename, downloadImage, generateHorseRaceResultImage } from "../../utils/imageUtils";
 import { ImageActions } from "../ImageActions";
+import { CoursePicker } from "./CoursePicker";
 import { DistancePicker } from "./DistancePicker";
 import { RaceCard } from "./RaceCard";
 import { Commentator, type CommentaryLine } from "./commentary";
@@ -22,6 +23,8 @@ type Phase = "idle" | "countdown" | "racing" | "finished";
 interface RaceOutcome {
   order: number[];
   winner: number;
+  /** その日の何レース目か（ターフビジョンの「第 N レース」） */
+  raceNumber: number;
   /** 出走時点の出走表（オッズは確定後の再計算に影響されない） */
   field: RaceEntry[];
 }
@@ -35,7 +38,7 @@ interface HorseRaceModeProps {
 export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNotify }) => {
   const { t, i18n } = useTranslation();
   const card = useRaceCard(options);
-  const { entries, distance, raceName, raceGrade } = card;
+  const { entries, distance, raceName, raceGrade, surface, going } = card;
 
   const stageRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<RaceScene | null>(null);
@@ -44,7 +47,11 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
   const canRecord = useMemo(() => isRaceRecordingSupported(), []);
   const [video, setVideo] = useState<RaceVideo | null>(null);
   const [sceneError, setSceneError] = useState(false);
-  const [sceneReady, setSceneReady] = useState(false);
+  // シーンを作るたびに増える番号（0 = まだない）。開発中のホットリロードなどでシーンだけが作り直されても、
+  // 番号が変わるので出走馬・コース・ターフビジョンの設定を新しいシーンにやり直せる（真偽値だと true のまま変わらず、
+  // 馬のいないシーンが残っていた）
+  const [sceneVersion, setSceneVersion] = useState(0);
+  const sceneReady = sceneVersion > 0;
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState<number | null>(null);
   const [commentary, setCommentary] = useState<CommentaryLine | null>(null);
@@ -85,7 +92,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
         try {
           scene = new RaceScene(stageRef.current);
           sceneRef.current = scene;
-          setSceneReady(true);
+          setSceneVersion((version) => version + 1);
         } catch (error) {
           console.error("Failed to initialize 3D scene", error);
           setSceneError(true);
@@ -127,7 +134,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     setRemaining(null);
     setSlowMotion(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fieldKey, sceneReady]);
+  }, [fieldKey, sceneVersion]);
 
   // 選択肢が変わったら予想をリセット
   const namesKey = entries.map((e) => e.name).join("\u0000");
@@ -135,37 +142,53 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     setBet(null);
   }, [namesKey]);
 
-  const distanceLabel = `${t("race.meters", { meters: distance })} ${t(
-    `race.categories.${distanceCategory(distance)}`
-  )}`;
+  const courseLabel = t("race.courseLabel", {
+    surface: t(`race.course.surfaces.${surface}`),
+    meters: distance,
+    category: t(`race.categories.${distanceCategory(distance)}`),
+    going: t(`race.course.goings.${surface}.${going}`),
+  });
+
+  // ----- 芝・ダートと馬場状態（見た目だけでレース展開には影響しない） -----
+  useEffect(() => {
+    sceneRef.current?.setCourse(surface, going);
+  }, [surface, going, sceneVersion]);
+
+  // ----- 会場の風（旗のなびき・尻尾の流れ・芝と木の揺れ） -----
+  useEffect(() => {
+    sceneRef.current?.setWind(card.wind);
+  }, [card.wind, sceneVersion]);
 
   // ----- ターフビジョン -----
+  // 1 日 12 レースの何レース目か。戦績の数から決め、確定後は走ったレースの番号のまま表示する
+  const nextRaceNumber = (card.history.length % 12) + 1;
+  const raceNumber = outcome?.raceNumber ?? nextRaceNumber;
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
-    const rowsFor = (indices: number[]) =>
-      indices
-        .map((i) => entries[i])
-        .filter(Boolean)
-        .map((e) => ({ number: e.number, name: e.name, color: e.color }));
-    if (phase === "finished" && outcome) {
-      scene.setVision({
-        title: t("race.vision.result"),
-        subtitle: distanceLabel,
-        rows: rowsFor(outcome.order),
-      });
-    } else {
-      const byPopularity = [...entries].sort((a, b) => a.popularity - b.popularity);
-      scene.setVision({
-        title: `${raceName || t("race.vision.title")}${raceGrade ? ` (${raceGrade})` : ""}`,
-        subtitle: distanceLabel,
-        rows:
-          phase === "idle"
-            ? byPopularity.map((e) => ({ number: e.number, name: `${e.name}  ${e.odds.toFixed(1)}`, color: e.color }))
-            : rowsFor(entries.map((e) => e.index)),
-      });
-    }
-  }, [entries, phase, outcome, distanceLabel, raceName, raceGrade, t, sceneReady]);
+    // 着順・着差・時計はシーンがレースの進み具合から決めるので、ここではレースの情報と表示の言葉だけ渡す
+    scene.setVision({
+      raceNumber,
+      title: `${raceName || t("race.vision.title")}${raceGrade ? ` (${raceGrade})` : ""}`,
+      surface: t(`race.course.surfaces.${surface}`),
+      going: t(`race.course.goings.${surface}.${going}`),
+      labels: {
+        racePrefix: t("race.vision.racePrefix"),
+        raceSuffix: t("race.vision.raceSuffix"),
+        time: t("race.vision.time"),
+        going: t("race.vision.going"),
+        official: t("race.vision.official"),
+        photo: t("race.vision.photo"),
+        photoFinish: t("race.vision.photoFinish"),
+        live: t("race.vision.live"),
+        nose: t("race.vision.nose"),
+        head: t("race.vision.head"),
+        neck: t("race.vision.neck"),
+        distance: t("race.vision.distance"),
+      },
+      entries: (outcome?.field ?? entries).map((e) => ({ number: e.number, name: e.name, color: e.color })),
+    });
+  }, [entries, outcome, raceNumber, raceName, raceGrade, surface, going, t, sceneVersion]);
 
   // ----- レース進行 -----
   const start = useCallback(() => {
@@ -180,6 +203,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     });
     const field = entries;
     const names = field.map((e) => e.name);
+    const thisRaceNumber = nextRaceNumber;
     const commentator = new Commentator(names);
 
     discardRecording();
@@ -228,7 +252,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
           },
           onComplete: () => {
             setPhase("finished");
-            setOutcome({ order: race.order, winner: race.winner, field });
+            setOutcome({ order: race.order, winner: race.winner, raceNumber: thisRaceNumber, field });
             card.recordRace({
               timestamp: Date.now(),
               distance,
@@ -250,7 +274,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
       }, GO_HOLD_MS);
     };
     later(() => tickCountdown(2), COUNTDOWN_INTERVAL_MS);
-  }, [canRecord, canStart, card, clearTimers, discardRecording, distance, entries, later, onFinish]);
+  }, [canRecord, canStart, card, clearTimers, discardRecording, distance, entries, later, nextRaceNumber, onFinish]);
 
   const reset = useCallback(() => {
     clearTimers();
@@ -306,13 +330,13 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
       betResult,
       betHit,
       labels: {
-        title: `${t("mode.horseRace")} ・ ${distanceLabel}`,
+        title: `${t("mode.horseRace")} ・ ${courseLabel}`,
         winnerLabel: t("race.result.winner"),
         rank: (rank) => t("race.result.rank", { rank }),
       },
       language: i18n.language,
     });
-  }, [betHit, betResult, distanceLabel, i18n.language, outcome, t]);
+  }, [betHit, betResult, courseLabel, i18n.language, outcome, t]);
 
   const countdownLabel = countdown === 0 ? t("ui.go") : countdown !== null ? String(countdown) : "";
 
@@ -367,6 +391,13 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     <div className="horse-race">
       <div className="race-controls">
         <DistancePicker value={distance} onChange={card.setDistance} disabled={locked} />
+        <CoursePicker
+          surface={surface}
+          going={going}
+          onSurfaceChange={card.setSurface}
+          onGoingChange={card.setGoing}
+          disabled={locked}
+        />
         <div className="race-actions">
           <button type="button" className="race-start-button" onClick={start} disabled={!canStart}>
             🏇 {t("race.start")}
@@ -388,6 +419,8 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
 
       <div ref={wrapRef} className={`race-stage-wrap ${isFullscreen ? "is-fullscreen" : ""}`}>
         <div ref={stageRef} className="race-stage" />
+        {/* 映画のようなシネマスコープの黒帯。レースの間だけ上下から差し込む（文字や操作のボタンは帯の上に重なる） */}
+        <div className={`race-letterbox ${phase !== "idle" ? "is-active" : ""}`} aria-hidden="true" />
 
         {sceneError && <div className="race-stage-error">{t("race.webglError")}</div>}
         {!sceneReady && !sceneError && <div className="race-stage-loading">{t("race.loading")}</div>}
@@ -425,6 +458,20 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
         >
           {isFullscreen ? "🗗" : "⛶"}
         </button>
+
+        {/* 全画面ではステージの外の操作パネルが見えないので、出走とゲートに戻すをステージの上に出す（走っている間は映像の邪魔なので隠す） */}
+        {isFullscreen && !locked && (
+          <div className="race-stage-actions">
+            {phase !== "idle" && (
+              <button type="button" className="race-reset-button" onClick={reset}>
+                {t("race.reset")}
+              </button>
+            )}
+            <button type="button" className="race-start-button" onClick={start} disabled={!canStart}>
+              🏇 {t("race.start")}
+            </button>
+          </div>
+        )}
 
         {countdown !== null && (
           <div className="race-countdown" key={countdown}>
@@ -500,6 +547,9 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
       <RaceCard
         entries={entries}
         distance={distance}
+        surface={surface}
+        going={going}
+        wind={card.wind}
         raceName={raceName}
         onRaceNameChange={card.setRaceName}
         raceGrade={raceGrade}

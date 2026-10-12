@@ -82,6 +82,29 @@
       "long": "長距離",
       "extended": "超長距離"
     },
+    "course": {
+      "surface": "跑道",
+      "going": "場地",
+      "surfaces": {
+        "turf": "草地",
+        "dirt": "泥地"
+      },
+      "goings": {
+        "turf": {
+          "firm": "良",
+          "good": "稍重",
+          "yielding": "重",
+          "soft": "不良"
+        },
+        "dirt": {
+          "firm": "良",
+          "good": "稍重",
+          "yielding": "重",
+          "soft": "不良"
+        }
+      }
+    },
+    "courseLabel": "{{surface}} {{meters}}公尺 {{category}}・{{going}}",
     "start": "出閘！",
     "reset": "回到閘門",
     "loading": "馬場準備中…",
@@ -105,7 +128,7 @@
       "raceNameLabel": "賽事名稱",
       "gradeLabel": "級別",
       "gradeNone": "無",
-      "course": "草地 {{meters}}公尺（{{category}}）",
+      "course": "{{surface}} {{meters}}公尺（{{category}}）・{{going}}",
       "field": "{{count}} 匹出賽",
       "headlines": {
         "front": "本報首選{{name}}，力拚一路領先到底",
@@ -127,7 +150,13 @@
       "debut": "初出",
       "note": "※ 評分根據近績及 GitHub 晨操資料計算。賠率為模擬估算，評分只會稍微影響賽果。",
       "clearHistory": "重設戰績（{{count}} 場）",
-      "clearConfirm": "確定刪除所有賽事紀錄？"
+      "clearConfirm": "確定刪除所有賽事紀錄？",
+      "wind": "風 {{speed}}m/s（直線{{stretch}}）",
+      "windStretch": {
+        "tailwind": "順風",
+        "headwind": "逆風",
+        "crosswind": "側風"
+      }
     },
     "github": {
       "title": "GitHub 晨操資料",
@@ -163,7 +192,18 @@
     },
     "vision": {
       "title": "輪盤盃",
-      "result": "正式賽果"
+      "racePrefix": "第",
+      "raceSuffix": "場",
+      "time": "時間",
+      "going": "場地",
+      "official": "確定",
+      "photo": "攝影",
+      "live": "輪盤實況",
+      "nose": "鼻差",
+      "head": "頭差",
+      "neck": "頸差",
+      "distance": "大差",
+      "photoFinish": "攝影判定"
     },
     "commentary": {
       "gate": "各馬已經入閘…",

@@ -38,6 +38,15 @@ import {
   type RaceGrade,
 } from "../utils/horseRaceStorage";
 import {
+  loadGoing,
+  loadSurface,
+  saveGoing,
+  saveSurface,
+  type TrackGoing,
+  type TrackSurface,
+} from "../utils/raceCourse";
+import { changeWindForGoing, createRaceWind, type RaceWind } from "../utils/raceWind";
+import {
   fetchGitHubActivity,
   GitHubFetchError,
   isValidLogin,
@@ -71,6 +80,10 @@ export const useRaceCard = (options: string[]) => {
   const [distance, setDistanceState] = useState<number>(loadDistance);
   const [raceName, setRaceNameState] = useState<string>(loadRaceName);
   const [raceGrade, setRaceGradeState] = useState<RaceGrade>(loadRaceGrade);
+  const [surface, setSurfaceState] = useState<TrackSurface>(loadSurface);
+  const [going, setGoingState] = useState<TrackGoing>(loadGoing);
+  // 会場の風。開いたときに決め、馬場状態を変えたら強さだけ決め直す（同じ日の同じ競馬場なので向きは変えない）
+  const [wind, setWind] = useState<RaceWind>(() => createRaceWind(loadGoing()));
   const [history, setHistory] = useState<RaceRecord[]>(loadRaceHistory);
   const [logins, setLogins] = useState<Record<string, string>>(loadGitHubLogins);
   const [activityCache, setActivityCache] =
@@ -94,6 +107,17 @@ export const useRaceCard = (options: string[]) => {
   const setRaceGrade = useCallback((grade: RaceGrade) => {
     setRaceGradeState(grade);
     saveRaceGrade(grade);
+  }, []);
+
+  const setSurface = useCallback((value: TrackSurface) => {
+    setSurfaceState(value);
+    saveSurface(value);
+  }, []);
+
+  const setGoing = useCallback((value: TrackGoing) => {
+    setGoingState(value);
+    saveGoing(value);
+    setWind((current) => changeWindForGoing(current, value));
   }, []);
 
   const base = useMemo(
@@ -211,6 +235,11 @@ export const useRaceCard = (options: string[]) => {
     setRaceName,
     raceGrade,
     setRaceGrade,
+    surface,
+    setSurface,
+    going,
+    setGoing,
+    wind,
     entries,
     history,
     recordRace,
