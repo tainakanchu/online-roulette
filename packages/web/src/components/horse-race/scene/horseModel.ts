@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { createCoatMaterial, createCoatUniforms, type CoatMarking } from "./horseCoat";
 import { createTailDepthMaterial, createTailGeometry, createTailMaterial, createTailUniforms } from "./horseTail";
-import { createNameLabelTexture, createNumberClothTexture, createSilkTexture } from "./textures";
+import { createNameLabelTexture, createSilkTexture } from "./textures";
+import { createZekkenTexture } from "./paddockTextures";
 
 // プリミティブを組み合わせた手続き生成の競走馬 + 騎手。+X 方向を向く。
 
@@ -46,6 +47,20 @@ const ellipsoid = (rx: number, ry: number, rz: number) => {
   return geometry;
 };
 
+/**
+ * 走っているときの鼻先が、馬の中心（root）からどれだけ前にあるか（ワールド単位）。
+ * 首の付け根 0.78 から、首（長さ 0.98、ギャロップの平均の角度 0.78rad）と、頭（首に対して −1.55rad）の鼻先まで 0.72 を足した長さ。
+ * JRA の着順は鼻先（鼻端）が決勝線に達した順なので、レースの位置はこの鼻先の位置として描く
+ */
+export const HORSE_NOSE_REACH = 0.78 + 0.98 * Math.cos(0.78) + 0.72 * Math.cos(0.78 - 1.55);
+
+/** これより遅いと並足で歩く（ワールド単位/秒） */
+const WALK_MAX_SPEED = 4;
+/** 並足の 1 完歩の長さ（約 1.7m） */
+const WALK_STRIDE = 2.55;
+/** 並足の脚を運ぶ順（legs の並び: 左後・右後・左前・右前） */
+const WALK_LEG_OFFSET = [0, 0.5, 0.25, 0.75];
+
 export class HorseModel {
   readonly root = new THREE.Group();
   readonly label: THREE.Sprite;
@@ -71,7 +86,7 @@ export class HorseModel {
   /** 汗のツヤ 0..1。走るほど増え、止まると引いていく */
   private sweat = 0;
 
-  constructor(spec: HorseSpec) {
+  constructor(readonly spec: HorseSpec) {
     const coat = COATS[spec.seed % COATS.length];
     this.phase = (spec.seed % 628) / 100;
 
@@ -107,7 +122,8 @@ export class HorseModel {
     const breechesMat = this.track(new THREE.MeshStandardMaterial({ color: "#f4f4f4", roughness: 0.6 }));
     const bootMat = this.track(new THREE.MeshStandardMaterial({ color: "#151515", roughness: 0.4 }));
     const skinMat = this.track(new THREE.MeshStandardMaterial({ color: "#e0b48f", roughness: 0.7 }));
-    const clothTex = this.track(createNumberClothTexture(spec.number, spec.color));
+    // ゼッケン（JRA と同じく馬番と馬名）。パドックでは騎手がいないので、鞍の下の布がよく見える
+    const clothTex = this.track(createZekkenTexture(spec.number, spec.name, spec.color));
     const clothMat = this.track(
       new THREE.MeshStandardMaterial({ map: clothTex, roughness: 0.8, side: THREE.DoubleSide })
     );
@@ -287,6 +303,13 @@ export class HorseModel {
     this.tailUniforms.uTailTime.value = this.idleTime;
     this.tailUniforms.uTailSpeed.value += (s - this.tailUniforms.uTailSpeed.value) * (1 - Math.exp(-dt * 3));
 
+    // パドックを引かれて歩く速さ（並足）。ギャロップとは脚の運びが違う
+    const isWalking = speed > 0.05 && speed < WALK_MAX_SPEED;
+    if (isWalking) {
+      this.walk(dt, speed);
+      return;
+    }
+
     if (s < 0.02) {
       // 待機中: 呼吸と首振り
       const breathe = Math.sin(this.idleTime * 2 + this.phase) * 0.015;
@@ -326,6 +349,38 @@ export class HorseModel {
     this.jockey.position.y = 1.86 - Math.sin(p + 0.6) * push;
     this.jockey.position.x = 0.02 + Math.sin(p + 2.2) * push * 0.8;
     this.jockey.rotation.z = -0.05 + Math.sin(p + 1.6) * 0.05 * effort;
+  }
+
+  /**
+   * 並足（常歩）。左後 → 左前 → 右後 → 右前 の順に 1/4 ずつずれて脚を運ぶ 4 拍子の歩き方で、
+   * 首は 1 歩ごとに上下に振る（1 完歩で 2 回）。歩幅は約 1.7m（2.55 単位）
+   */
+  private walk(dt: number, speed: number) {
+    this.phase += (dt * Math.PI * 2 * speed) / WALK_STRIDE;
+    const p = this.phase;
+    for (const leg of this.legs) {
+      const local = p - WALK_LEG_OFFSET[this.legs.indexOf(leg)] * Math.PI * 2;
+      leg.upper.rotation.z = Math.sin(local) * 0.3 * (leg.front ? 1 : 0.85);
+      // 脚を前へ運ぶ間だけ膝（前脚）・飛節（後ろ脚）を曲げる
+      const bend = Math.max(0, Math.sin(local + 0.4)) * 0.55;
+      leg.lower.rotation.z = leg.front ? -bend : bend * 0.8;
+    }
+    this.body.position.y = Math.sin(p * 2) * 0.012;
+    this.body.rotation.z = 0;
+    this.neck.rotation.z = 0.92 + Math.sin(p * 2 + 0.8) * 0.05;
+    this.head.rotation.z = -1.62 + Math.sin(p * 2 + 1.4) * 0.03;
+    this.tail.rotation.z = 1.15 + Math.sin(p) * 0.05;
+    this.tail.rotation.y = Math.sin(p * 0.5 + this.idleTime * 0.3) * 0.15;
+  }
+
+  /** 騎手を乗せる / 降ろす（パドックでは騎乗合図まで鞍だけ） */
+  setJockeyVisible(visible: boolean) {
+    this.jockey.visible = visible;
+  }
+
+  /** 引き手綱をつなぐ頭絡の位置（ワールド座標） */
+  bridlePosition(out: THREE.Vector3) {
+    return this.head.localToWorld(out.set(0.12, -0.1, 0));
   }
 
   /**

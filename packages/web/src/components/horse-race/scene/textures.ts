@@ -54,21 +54,6 @@ export const createTurfTexture = (
 export const createGroundTexture = (repeat: [number, number]) =>
   createTurfTexture("#4f7a35", "#5a8740", repeat, 1);
 
-/** ゼッケン（馬番 + 色） */
-export const createNumberClothTexture = (num: number, color: string) => {
-  const { canvas, ctx } = makeCanvas(128, 96);
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, 128, 96);
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.fillRect(30, 14, 68, 68);
-  ctx.fillStyle = "#111";
-  ctx.font = "bold 56px sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(String(num), 64, 50);
-  return toTexture(canvas);
-};
-
 /** 勝負服（ベース色 + 柄） */
 export const createSilkTexture = (color: string, pattern: number, accent: string) => {
   const { canvas, ctx } = makeCanvas(128, 128);

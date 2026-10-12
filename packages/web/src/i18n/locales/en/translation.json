@@ -106,7 +106,7 @@
     },
     "courseLabel": "{{surface}} {{meters}}m {{category}} · {{going}}",
     "start": "And they're off!",
-    "reset": "Back to gate",
+    "reset": "Back to paddock",
     "loading": "Preparing the racecourse…",
     "webglError": "Your browser does not support 3D graphics, so Derby mode can't be shown.",
     "needTwo": "Add at least 2 horses to race",
@@ -188,7 +188,8 @@
     },
     "video": {
       "save": "Save video",
-      "downloaded": "Race video downloaded!"
+      "downloaded": "Race video downloaded!",
+      "recording": "Recording until the news ends…"
     },
     "vision": {
       "title": "Roulette Stakes",
@@ -263,6 +264,12 @@
       },
       "vtrMark": "VTR",
       "endCard": "See you at the next race"
+    },
+    "paddock": {
+      "title": "PADDOCK",
+      "entering": "ENTERING",
+      "call": "Riders up!",
+      "weight": "{{weight}}kg ({{change}})"
     }
   }
 }

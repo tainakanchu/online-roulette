@@ -9,21 +9,23 @@ import { DistancePicker } from "./DistancePicker";
 import { RaceCard } from "./RaceCard";
 import { Commentator, type CommentaryLine } from "./commentary";
 import { isRaceRecordingSupported, RaceRecorder, type RaceVideo } from "./raceRecorder";
+import { BLACKOUT_MS } from "./recorderNews";
 import { NewsOverlay } from "./NewsOverlay";
+import { PaddockTelop } from "./PaddockTelop";
+import { horseWeight, weightChange } from "../../utils/paddock";
 import { buildRaceNews, cueCardAt, type NewsSegment } from "../../utils/raceNews";
-import type { NewsWallInfo, RaceScene, RaceTick } from "./scene/RaceScene";
+import type { NewsWallInfo, PaddockFocus, RaceScene, RaceTick } from "./scene/RaceScene";
 
 const COUNTDOWN_INTERVAL_MS = 720;
 const GO_HOLD_MS = 650;
-/** 確定表示まで映すため、onComplete 後も少し録画を続ける */
+/** ニュースが終わって競馬場に戻ってから、確定の表示を映すために録画を続ける時間 */
 const RECORD_TAIL_MS = 2500;
-/**
- * 確定からレース後のニュースに切り替えるまで。確定の後に電光掲示板を映す時間（3 秒）と、録画を止めるまで（RECORD_TAIL_MS）を待つ
- * （ニュースのスタジオが録画に入らないように）
- */
+/** 確定からレース後のニュースに切り替えるまで（確定の後に電光掲示板を映す時間） */
 const NEWS_DELAY_MS = 3600;
+/** 騎乗合図（止まーれー）から、騎手が乗ってゲートへ移るまで */
+const MOUNT_CALL_MS = 1800;
 /** 競馬場とスタジオの切り替えで黒を挟む時間（CSS の news-blackout と合わせる） */
-const NEWS_FADE_MS = 650;
+const NEWS_FADE_MS = BLACKOUT_MS;
 /** 着差がこれより大きいと「大差」と読む（馬身） */
 const BIG_MARGIN_LENGTHS = 10.5;
 /** 勝ち馬がゴールするまでの実時間（スローモーション分は別途伸びる）。長い距離ほど少し速く流す */
@@ -57,6 +59,8 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
   const recorderRef = useRef<RaceRecorder | null>(null);
   const canRecord = useMemo(() => isRaceRecordingSupported(), []);
   const [video, setVideo] = useState<RaceVideo | null>(null);
+  // レースからニュースの終わりまで録画している間（動画の保存ボタンの代わりに「録画中」を出す）
+  const [isRecording, setIsRecording] = useState(false);
   const [sceneError, setSceneError] = useState(false);
   // シーンを作るたびに増える番号（0 = まだない）。開発中のホットリロードなどでシーンだけが作り直されても、
   // 番号が変わるので出走馬・コース・ターフビジョンの設定を新しいシーンにやり直せる（真偽値だと true のまま変わらず、
@@ -79,6 +83,9 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
   );
   // 競馬場とスタジオの切り替えに挟む黒（in: 黒くなっていく / out: 黒から明けていく）
   const [blackout, setBlackout] = useState<"none" | "in" | "out">("none");
+  // パドック中継で映している馬（テロップ）と、騎乗合図の最中か
+  const [paddockFocus, setPaddockFocus] = useState<PaddockFocus | null>(null);
+  const [mountCall, setMountCall] = useState(false);
 
   const locked = phase === "countdown" || phase === "racing";
   const canStart = entries.length >= 2 && !locked && sceneReady;
@@ -96,7 +103,21 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     sceneRef.current?.setFrameListener(null);
     recorderRef.current?.dispose();
     recorderRef.current = null;
+    setIsRecording(false);
     setVideo(null);
+  }, []);
+
+  /** 録画を止めて、動画を保存できるようにする（ニュースが終わって競馬場に戻った後に呼ぶ） */
+  const finishRecording = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+    sceneRef.current?.setFrameListener(null);
+    void recorder.stop().then((result) => {
+      if (recorderRef.current !== recorder) return;
+      recorderRef.current = null;
+      setIsRecording(false);
+      setVideo(result);
+    });
   }, []);
 
   // ----- three.js シーンの生成（遅延ロード） -----
@@ -152,6 +173,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     setSlowMotion(false);
     setNews(null);
     setBlackout("none");
+    setMountCall(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fieldKey, sceneVersion]);
 
@@ -167,6 +189,32 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     category: t(`race.categories.${distanceCategory(distance)}`),
     going: t(`race.course.goings.${surface}.${going}`),
   });
+
+  // ----- パドック（掲示板の馬体重と、中継のテロップ） -----
+  // 馬体重はレースごとに変わる（前走からの増減）。戦績の数をレースの回数として使う
+  const raceCount = card.history.length;
+  const paddockEntries = useMemo(
+    () =>
+      entries.map((e) => ({
+        number: e.number,
+        name: e.name,
+        color: e.color,
+        weight: horseWeight(e.seed, raceCount),
+        change: weightChange(e.seed, raceCount),
+        odds: e.odds,
+        popularity: e.popularity,
+      })),
+    [entries, raceCount]
+  );
+  useEffect(() => {
+    sceneRef.current?.setPaddockEntries(paddockEntries, { odds: (odds) => odds.toFixed(1) });
+  }, [paddockEntries, sceneVersion]);
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    scene.setPaddockListener(setPaddockFocus);
+    return () => scene.setPaddockListener(null);
+  }, [sceneVersion]);
 
   // ----- 芝・ダートと馬場状態（見た目だけでレース展開には影響しない） -----
   useEffect(() => {
@@ -215,7 +263,10 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     (scene: RaceScene, field: RaceEntry[]) => {
       const summary = scene.getRaceSummary();
       const winner = summary ? field[summary.order[0]] : undefined;
-      if (!summary || !winner) return;
+      if (!summary || !winner) {
+        finishRecording();
+        return;
+      }
       const margin =
         summary.marginLengths > BIG_MARGIN_LENGTHS
           ? t("race.news.bigMargin")
@@ -275,15 +326,16 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
             setNews({ segments, index, shoulder, title: raceTitle });
             if (index === 0) fadeFromBlack();
           },
-          // 締めのカットの最後は黒に溶暗しているので、競馬場は黒から明ける
+          // 締めのカットの最後は黒に溶暗しているので、競馬場は黒から明ける。録画は競馬場に戻った所まで
           onEnd: () => {
             setNews(null);
             fadeFromBlack();
+            later(finishRecording, RECORD_TAIL_MS);
           },
         });
       }, NEWS_FADE_MS);
     },
-    [courseLabel, later, raceTitle, t]
+    [courseLabel, finishRecording, later, raceTitle, t]
   );
 
   const skipNews = useCallback(() => {
@@ -291,7 +343,8 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     setNews(null);
     setBlackout("out");
     later(() => setBlackout("none"), NEWS_FADE_MS);
-  }, [later]);
+    later(finishRecording, RECORD_TAIL_MS);
+  }, [finishRecording, later]);
 
   // ----- レース進行 -----
   const start = useCallback(() => {
@@ -315,74 +368,86 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     setNews(null);
     setBlackout("none");
     void scene.prepareNews();
-    const recorder = canRecord ? new RaceRecorder() : null;
-    if (recorder) {
-      recorderRef.current = recorder;
-      scene.setFrameListener((canvas) => recorder.captureFrame(canvas));
-    }
 
-    scene.resetToGate();
-    scene.showGate();
-    setOutcome(null);
-    setLiveOrder([]);
-    setRemaining(distance);
-    setSlowMotion(false);
-    setCommentary({ key: "race.commentary.gate" });
-    setPhase("countdown");
-    setCountdown(3);
-
-    const tickCountdown = (value: number) => {
-      if (value > 0) {
-        setCountdown(value);
-        later(() => tickCountdown(value - 1), COUNTDOWN_INTERVAL_MS);
-        return;
-      }
-      setCountdown(0);
-      scene.openGate();
+    // パドックにいたら、騎乗合図（止まーれー）→ 騎手が乗る → 黒を挟んでゲートへ
+    if (scene.isInPaddock()) {
+      setPhase("countdown");
+      setMountCall(true);
+      scene.callToMount();
+      later(() => setBlackout("in"), MOUNT_CALL_MS);
       later(() => {
-        setCountdown(null);
-        setPhase("racing");
-        setCommentary(commentator.start());
-        scene.startRace(race, raceSeconds(distance), {
-          onTick: (tick: RaceTick) => {
-            setLiveOrder(tick.order);
-            setRemaining(tick.remainingMeters);
-            setSlowMotion(tick.slowMotion);
-            const line = commentator.feed(tick);
-            if (line) setCommentary(line);
-          },
-          onWinnerCross: () => {
-            setCommentary(commentator.finish(race.winner));
-            setSlowMotion(false);
-            setRemaining(0);
-            setPhotoFlash(true);
-            later(() => setPhotoFlash(false), 700);
-          },
-          onComplete: () => {
-            setPhase("finished");
-            setOutcome({ order: race.order, winner: race.winner, raceNumber: thisRaceNumber, field });
-            card.recordRace({
-              timestamp: Date.now(),
-              distance,
-              order: race.order.map((i) => names[i]),
-            });
-            onFinish?.(names[race.winner] ?? "");
-            later(() => beginNews(scene, field), NEWS_DELAY_MS);
-            if (recorder) {
-              later(() => {
-                scene.setFrameListener(null);
-                void recorder.stop().then((result) => {
-                  if (recorderRef.current !== recorder) return;
-                  recorderRef.current = null;
-                  setVideo(result);
-                });
-              }, RECORD_TAIL_MS);
-            }
-          },
-        });
-      }, GO_HOLD_MS);
-    };
-    later(() => tickCountdown(2), COUNTDOWN_INTERVAL_MS);
+        setMountCall(false);
+        runRace();
+        setBlackout("out");
+        later(() => setBlackout("none"), NEWS_FADE_MS);
+      }, MOUNT_CALL_MS + NEWS_FADE_MS);
+      return;
+    }
+    runRace();
+
+    function runRace() {
+      if (!scene) return;
+      const recorder = canRecord ? new RaceRecorder() : null;
+      if (recorder) {
+        recorderRef.current = recorder;
+        setIsRecording(true);
+        scene.setFrameListener((canvas) => recorder.captureFrame(canvas));
+      }
+
+      scene.resetToGate();
+      scene.showGate();
+      setOutcome(null);
+      setLiveOrder([]);
+      setRemaining(distance);
+      setSlowMotion(false);
+      setCommentary({ key: "race.commentary.gate" });
+      setPhase("countdown");
+      setCountdown(3);
+
+      const tickCountdown = (value: number) => {
+        if (value > 0) {
+          setCountdown(value);
+          later(() => tickCountdown(value - 1), COUNTDOWN_INTERVAL_MS);
+          return;
+        }
+        setCountdown(0);
+        scene.openGate();
+        later(() => {
+          setCountdown(null);
+          setPhase("racing");
+          setCommentary(commentator.start());
+          scene.startRace(race, raceSeconds(distance), {
+            onTick: (tick: RaceTick) => {
+              setLiveOrder(tick.order);
+              setRemaining(tick.remainingMeters);
+              setSlowMotion(tick.slowMotion);
+              const line = commentator.feed(tick);
+              if (line) setCommentary(line);
+            },
+            onWinnerCross: () => {
+              setCommentary(commentator.finish(race.winner));
+              setSlowMotion(false);
+              setRemaining(0);
+              setPhotoFlash(true);
+              later(() => setPhotoFlash(false), 700);
+            },
+            onComplete: () => {
+              setPhase("finished");
+              setOutcome({ order: race.order, winner: race.winner, raceNumber: thisRaceNumber, field });
+              card.recordRace({
+                timestamp: Date.now(),
+                distance,
+                order: race.order.map((i) => names[i]),
+              });
+              onFinish?.(names[race.winner] ?? "");
+              // 録画はニュースの終わりまで続ける（止めるのは beginNews の後）
+              later(() => beginNews(scene, field), NEWS_DELAY_MS);
+            },
+          });
+        }, GO_HOLD_MS);
+      };
+      later(() => tickCountdown(2), COUNTDOWN_INTERVAL_MS);
+    }
   }, [
     beginNews,
     canRecord,
@@ -402,7 +467,9 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     discardRecording();
     setNews(null);
     setBlackout("none");
-    sceneRef.current?.resetToGate();
+    setMountCall(false);
+    // レース前の状態（パドックで周回）に戻す
+    sceneRef.current?.showPaddock();
     setPhase("idle");
     setCountdown(null);
     setOutcome(null);
@@ -463,10 +530,27 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
 
   const countdownLabel = countdown === 0 ? t("ui.go") : countdown !== null ? String(countdown) : "";
 
+  // 録画に焼き込むニュースのテロップの出方と、黒の濃さは、切り替わった時刻からの経過で決める
+  const blackoutSinceRef = useRef(0);
+  useEffect(() => {
+    blackoutSinceRef.current = performance.now();
+  }, [blackout]);
+  const newsStartedAtRef = useRef(0);
+  useEffect(() => {
+    newsStartedAtRef.current = performance.now();
+  }, [news]);
+  const shoulderImage = useMemo(() => {
+    if (!news?.shoulder) return null;
+    const image = new Image();
+    image.src = news.shoulder;
+    return image;
+  }, [news?.shoulder]);
+
   // 録画に焼き込む HUD（毎フレームは recorder 側が ref から読む）
   useEffect(() => {
     const recorder = recorderRef.current;
     if (!recorder) return;
+    const segment = news?.segments[news.index];
     const status =
       countdown !== null
         ? countdownLabel
@@ -476,6 +560,23 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
             : t("race.goal")
           : "";
     recorder.overlay = {
+      news:
+        news && segment
+          ? {
+              startedAt: newsStartedAtRef.current,
+              seconds: segment.seconds,
+              shot: segment.shot,
+              isClosing: segment.id === "closing",
+              corner: t("race.news.corner"),
+              vtrMark: t("race.news.vtrMark"),
+              telop: segment.telop ? t(segment.telop.key, segment.telop.params) : "",
+              caption: segment.script ? t(segment.script.key, segment.script.params) : "",
+              shoulder: shoulderImage,
+              raceTitle: news.title,
+              endCard: t("race.news.endCard"),
+            }
+          : null,
+      blackout: { kind: blackout, since: blackoutSinceRef.current },
       commentary: commentary && phase !== "idle" ? t(commentary.key, commentary.params) : "",
       status,
       order:
@@ -485,8 +586,9 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
               .filter(Boolean)
               .map((e) => ({ number: e.number, color: e.color }))
           : [],
+      // 画面と同じく、ニュースの間は確定の表を出さない
       result:
-        phase === "finished" && outcome
+        phase === "finished" && outcome && !news
           ? {
               title: t("race.result.title"),
               rows: outcome.order
@@ -502,7 +604,20 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
             }
           : null,
     };
-  }, [commentary, countdown, countdownLabel, entries, liveOrder, outcome, phase, remaining, t]);
+  }, [
+    blackout,
+    commentary,
+    countdown,
+    countdownLabel,
+    entries,
+    liveOrder,
+    news,
+    outcome,
+    phase,
+    remaining,
+    shoulderImage,
+    t,
+  ]);
 
   const downloadVideo = useCallback(() => {
     if (!video) return;
@@ -615,6 +730,16 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
           />
         )}
 
+        {/* パドック中継のテロップ（馬番・馬名・馬体重）と、騎乗合図 */}
+        {phase === "idle" && !news && paddockFocus && (
+          <PaddockTelop
+            key={`${paddockFocus.number}-${paddockFocus.entering}`}
+            entry={paddockEntries.find((e) => e.number === paddockFocus.number)}
+            entering={paddockFocus.entering}
+          />
+        )}
+        {mountCall && <div className="paddock-call">{t("race.paddock.call")}</div>}
+
         {blackout !== "none" && <div className={`news-blackout news-blackout--${blackout}`} aria-hidden="true" />}
 
         {commentary && phase !== "idle" && !news && (
@@ -668,6 +793,11 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
           {video && (
             <button type="button" className="race-video-button" onClick={downloadVideo}>
               🎬 {t("race.video.save")}
+            </button>
+          )}
+          {!video && isRecording && (
+            <button type="button" className="race-video-button" disabled>
+              🎬 {t("race.video.recording")}
             </button>
           )}
         </div>

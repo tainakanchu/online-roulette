@@ -106,7 +106,7 @@
     },
     "courseLabel": "{{surface}} {{meters}}m {{category}}・{{going}}",
     "start": "出走！",
-    "reset": "ゲートに戻す",
+    "reset": "パドックに戻す",
     "loading": "競馬場を準備中…",
     "webglError": "3D 表示に対応していないブラウザのため、競馬モードを表示できません。",
     "needTwo": "2頭以上で出走できます",
@@ -188,7 +188,8 @@
     },
     "video": {
       "save": "動画を保存",
-      "downloaded": "レース動画をダウンロードしました!"
+      "downloaded": "レース動画をダウンロードしました!",
+      "recording": "ニュースの終わりまで録画中…"
     },
     "vision": {
       "title": "ルーレット記念",
@@ -263,6 +264,12 @@
       },
       "vtrMark": "VTR",
       "endCard": "次のレースもお楽しみに"
+    },
+    "paddock": {
+      "title": "パドック",
+      "entering": "入場",
+      "call": "止まーれー！",
+      "weight": "{{weight}}kg（{{change}}）"
     }
   }
 }

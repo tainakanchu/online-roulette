@@ -8,11 +8,12 @@ import type { TrackGoing, TrackSurface } from "../../../utils/raceCourse";
 import {
   createEnvironment,
   FINISH_X,
+  STANDS,
   TRACK_HALF_WIDTH,
   WORLD_PER_METER,
   type Environment,
 } from "./environment";
-import { HorseModel, type HorseSpec } from "./horseModel";
+import { HORSE_NOSE_REACH, HorseModel, type HorseSpec } from "./horseModel";
 import { CourseExtras, loadCourseExtraModels } from "./courseExtras";
 import { loadPigeonModel, Pigeons } from "./pigeons";
 import { ClothFlags } from "./clothFlag";
@@ -31,8 +32,11 @@ import { loadGateModel, releaseGateDetail, StartingGate, type GateModel } from "
 import { createSignTexture, createSoftDotTexture } from "./textures";
 import type { VisionInfo } from "./turfVision";
 import type { NewsSegment } from "../../../utils/raceNews";
+import { CameraOperator, type OperatorFrame } from "../../../utils/cameraOperator";
+import { pickCameraPlan, shotForFraction, type CameraPlan } from "../../../utils/raceCamera";
 import type { NewsStudio } from "./newsStudio";
 import type { NewsWallInfo } from "./newsScreens";
+import { loadPaddockModels, Paddock, PADDOCK_CENTER, type PaddockBoardLabels, type PaddockEntry } from "./paddock";
 import {
   formatRaceClock,
   formatRaceTime,
@@ -82,9 +86,19 @@ export interface RaceSummary {
 }
 
 export type { NewsWallInfo } from "./newsScreens";
+export type { PaddockBoardLabels, PaddockEntry } from "./paddock";
+
+/** パドックで今カメラが映している馬（テロップ用）。入ってきたところなら entering */
+export interface PaddockFocus {
+  number: number;
+  entering: boolean;
+}
 
 type Shot =
   | "idle"
+  | "paddockWide"
+  | "paddockFollow"
+  | "paddockEntry"
   | "gate"
   | "chase"
   | "side"
@@ -106,7 +120,14 @@ interface ShotStyle {
   shake: number;
   /** カメラが狙いを追う速さ（バネの固有角振動数。大きいほどきびきび追う） */
   follow: number;
+  /** バネの減衰比（省略 = 1 の臨界減衰で行き過ぎない）。1 より小さいと人が振るように少し行き過ぎて戻る */
+  damping?: number;
 }
+
+/** パドックのカメラマンが振っている間に足す手ぶれ（ワールド単位） */
+const PADDOCK_PAN_SHAKE = 0.07;
+/** パドックのカメラマンが振ってから、ピントを探り終えるまで（この間は外れたときのぼけを大きく） */
+const PADDOCK_HUNT_SECONDS = 2.5;
 
 /**
  * カットごとの撮り方（映画風）。レース前はクレーンでゆっくり降り、スタートは地面すれすれの正面から望遠で受け、
@@ -114,6 +135,11 @@ interface ShotStyle {
  */
 const SHOT_STYLES: Record<Shot, ShotStyle> = {
   idle: { fov: 34, roll: 0, shake: 0, follow: 1.4 },
+  // パドック中継: 全景はスタンド側の段々の上から、1 頭ずつの寄りは周回路の外から望遠で並走する
+  paddockWide: { fov: 34, roll: 0, shake: 0.01, follow: 1.2 },
+  // パドックの寄りは段々の上のカメラマンが手持ちで振る（次の馬へ振ると少し行き過ぎて戻す）
+  paddockFollow: { fov: 22, roll: 0, shake: 0.015, follow: 2.6, damping: 0.6 },
+  paddockEntry: { fov: 30, roll: 0, shake: 0.015, follow: 2.2, damping: 0.6 },
   gate: { fov: 30, roll: 0.02, shake: 0.015, follow: 2 },
   chase: { fov: 24, roll: 0, shake: 0.03, follow: 3.2 },
   side: { fov: 22, roll: 0, shake: 0.05, follow: 2.6 },
@@ -452,6 +478,8 @@ export class RaceScene {
   private callbacks: RaceCallbacks = {};
   private frameListener: ((canvas: HTMLCanvasElement) => void) | null = null;
   private shot: Shot = "idle";
+  /** このレースのカメラワークの型（レースごとに前回と違う型を選ぶ） */
+  private cameraPlan: CameraPlan | null = null;
   /** ジョッキー視点で乗る馬（カットが変わるたびに、2 番手以下からランダムに選ぶ） */
   private jockeyHorse = 0;
   /** 画面の縦横比で決まる通常の画角（ジョッキー視点のときだけ広げる） */
@@ -485,6 +513,33 @@ export class RaceScene {
   private studio: NewsStudio | null = null;
   private studioLoading: Promise<NewsStudio | null> | null = null;
   private news: { segments: NewsSegment[]; index: number; time: number; callbacks: NewsCallbacks } | null = null;
+  /** パドック（読み込めるまでは null で、レース前はゲートの前の画のまま） */
+  private paddock: Paddock | null = null;
+  /** レース前（出走を押すまで）は、馬をパドックで周回させる */
+  private inPaddock = true;
+  /** パドック中継で 1 頭ずつ映していく順番 */
+  private paddockFollowIndex = 0;
+  /** パドック中継で映している馬 */
+  private paddockFocus: HorseModel | null = null;
+  private paddockListener: ((focus: PaddockFocus | null) => void) | null = null;
+  private paddockEntries: { entries: PaddockEntry[]; labels: PaddockBoardLabels } | null = null;
+  /** 騎乗合図の後、騎手が馬に乗る時刻 */
+  private mountAt = Infinity;
+  /** 騎乗合図から出走までの間（パドック中継のカットを切り替えない） */
+  private mounting = false;
+  /** パドックの寄りと入場のカットのカメラマン（フレーミング・ズーム・ピントを手で合わせる） */
+  private readonly paddockOperator = new CameraOperator();
+  /** カットで入ったら、カメラマンは最初から合わせた所から始める */
+  private paddockOperatorSnap = true;
+  /** カメラマンが追っている馬の 1 フレーム前の位置と、歩く速さ */
+  private readonly paddockSubjectPrev = new THREE.Vector3();
+  private readonly paddockSubjectVelocity = new THREE.Vector3();
+  /** 振っている最中か（0: 狙いに収まっている / 1: 大きく外れている）。手ぶれ・ぶれの強さに使う */
+  private paddockPanAmount = 0;
+  /** パドック中継の今のカットの長さ（秒）。毎回少しずつ変える */
+  private paddockCutLength = 6;
+  private lastPaddockFocus = "";
+  private readonly paddockTmp = new THREE.Vector3();
   /** ニュースの VTR（ゴール前のリプレイ）。savedT はリプレイ前のレース内部時刻（終わったら戻す） */
   private replay: { slowFrom: number; savedT: number; time: number } | null = null;
   private readonly videoLook = new THREE.Vector3();
@@ -593,15 +648,31 @@ export class RaceScene {
         this.buildCourseMarks();
       })
       .catch((error) => console.warn("Failed to load course props", error));
-    loadCourseExtraModels()
+    const extrasReady = loadCourseExtraModels()
       .then((models) => {
-        if (this.disposed) return;
+        if (this.disposed) return null;
         this.courseExtras = new CourseExtras(models, this.environment.uniforms, SUN_DIRECTION);
         this.courseExtras.setClothFlags(this.clothFlags);
         this.courseExtras.layout(this.startX);
         this.scene.add(this.courseExtras.group);
+        return this.courseExtras;
       })
-      .catch((error) => console.warn("Failed to load course extras", error));
+      .catch((error) => {
+        console.warn("Failed to load course extras", error);
+        return null;
+      });
+    // パドックの植え込みはコースの生垣と同じ葉の質感を使うので、備品を読み込んでから組み立てる
+    Promise.all([loadPaddockModels(), extrasReady])
+      .then(([models, extras]) => {
+        if (this.disposed) return;
+        this.paddock = new Paddock(models, this.environment.uniforms, extras?.foliage ?? null);
+        this.scene.add(this.paddock.group);
+        if (this.paddockEntries) this.paddock.setEntries(this.paddockEntries.entries, this.paddockEntries.labels);
+        this.paddock.sync(this.horses, { animateEntry: false, replaced: new Map(), onLeft: (horse) => this.removeHorse(horse) });
+        this.paddock.setActive(this.inPaddock);
+        if (this.inPaddock) this.setShot("paddockWide", true, true);
+      })
+      .catch((error) => console.warn("Failed to load paddock", error));
     loadPigeonModel()
       .then((model) => {
         if (this.disposed) return;
@@ -640,24 +711,85 @@ export class RaceScene {
   // ----- 公開 API -----
 
   /** 出走馬とコース（距離）をセットする。ゲートに収まった状態に戻る */
+  /**
+   * 出走馬とコース（距離）をセットする。レース前の状態（パドック）に戻る。
+   * 馬は名前で見分けて使い回し、新しい参加者の馬はパドックの入口から入ってきて、いなくなった参加者の馬は出ていく。
+   * 馬番や色が変わった馬（前の参加者が抜けて番号が繰り上がった馬など）は作り直すが、パドックの位置は引き継ぐ
+   */
   setField(specs: HorseSpec[], distanceMeters: number) {
+    const wasInPaddock = this.inPaddock && this.paddock?.isActive === true;
     this.stopRace();
-    for (const horse of this.horses) {
-      this.scene.remove(horse.root);
-      horse.dispose();
-    }
     this.distanceMeters = distanceMeters;
     this.startX = FINISH_X - distanceMeters * WORLD_PER_METER;
-    this.horses = specs.map((spec) => new HorseModel(spec));
+    const pool = new Map<string, HorseModel[]>();
+    for (const horse of this.horses) pool.set(horse.spec.name, [...(pool.get(horse.spec.name) ?? []), horse]);
+    const replaced = new Map<HorseModel, HorseModel>();
+    const next = specs.map((spec) => {
+      const old = pool.get(spec.name)?.shift();
+      const isSame = old && old.spec.number === spec.number && old.spec.color === spec.color && old.spec.seed === spec.seed;
+      if (old && isSame) return old;
+      const horse = new HorseModel(spec);
+      this.scene.add(horse.root);
+      if (old) replaced.set(horse, old);
+      return horse;
+    });
+    const removed = [...pool.values()].flat();
+    // 入場の演出は、もともといた馬に新しい参加者の馬が加わるときだけ。
+    // 最初に開いたときや、全員が入れ替わったときは、入場させずに最初から周回させる（全員がそろって入ってこない）
+    const isAddingToField = next.some((horse) => this.horses.includes(horse)) || replaced.size > 0;
+    this.horses = next;
     const n = specs.length;
     const laneWidth = n > 0 ? Math.min(1.7, (TRACK_HALF_WIDTH * 2 - 3) / n) : 1.7;
     // 1 番が内ラチ側（奥）
     this.lanes = specs.map((_, i) => ((n - 1) / 2) * laneWidth - i * laneWidth + 0.5);
-    this.horses.forEach((horse) => this.scene.add(horse.root));
-    this.tailPhysics?.setHorses(this.horses);
     this.placeAtGate();
+    if (this.paddock) {
+      // パドックで周回中に増えた馬だけ、入口から入ってくる
+      this.paddock.sync(next, {
+        animateEntry: wasInPaddock && isAddingToField,
+        replaced,
+        onLeft: (horse) => this.removeHorse(horse),
+      });
+    }
+    for (const old of replaced.values()) this.removeHorse(old);
+    // パドックが無いとき・レースの後は、いなくなった馬はすぐ片付ける（パドックでは出ていき終えてから）
+    if (!this.paddock || !wasInPaddock) removed.forEach((horse) => this.removeHorse(horse));
+    this.tailPhysics?.setHorses(this.horses);
     this.buildCourse(laneWidth);
-    this.setShot("idle", true, true);
+    this.enterPaddock(!wasInPaddock);
+  }
+
+  /** パドックに戻る（レース前の状態）。出走を押すまで、馬は騎手を乗せずに周回する */
+  showPaddock() {
+    this.stopRace();
+    this.placeAtGate();
+    this.gate?.close();
+    this.enterPaddock(true);
+  }
+
+  /** レース前（パドック）の状態か。パドックを読み込めていなければ false（ゲートの前で待つ） */
+  isInPaddock() {
+    return this.inPaddock && this.paddock?.isActive === true;
+  }
+
+  /** 騎乗合図（止まーれー）。馬が止まり、少しして騎手が乗る */
+  callToMount() {
+    this.paddock?.stopAll();
+    this.mountAt = this.time + 0.9;
+    this.mounting = true;
+    this.notifyPaddockFocus(null);
+    this.setShot("paddockWide");
+  }
+
+  /** パドックの掲示板に出す出走馬の情報 */
+  setPaddockEntries(entries: PaddockEntry[], labels: PaddockBoardLabels) {
+    this.paddockEntries = { entries, labels };
+    this.paddock?.setEntries(entries, labels);
+  }
+
+  /** パドック中継で映している馬が変わったら呼ぶ（テロップ用） */
+  setPaddockListener(listener: ((focus: PaddockFocus | null) => void) | null) {
+    this.paddockListener = listener;
   }
 
   /** 芝・ダートと馬場状態。見た目（路面・土煙・霞）だけを変える */
@@ -732,12 +864,20 @@ export class RaceScene {
       speed: unitsPerTime,
     });
     this.gate?.open();
-    this.setShot("chase");
+    // カメラワークの型を選び、最初のカットから始める
+    this.cameraPlan = pickCameraPlan(this.cameraPlan?.id ?? null);
+    this.setShot(shotForFraction(this.cameraPlan, 0));
   }
 
-  /** ゲートに戻す */
+  /** 出走の前に、全馬をゲートに収める（パドックから騎手を乗せて移る） */
   resetToGate() {
     this.stopRace();
+    this.inPaddock = false;
+    this.paddock?.setActive(false);
+    this.mountAt = Infinity;
+    this.mounting = false;
+    for (const horse of this.horses) horse.setJockeyVisible(true);
+    this.notifyPaddockFocus(null);
     this.placeAtGate();
     this.gate?.close();
     this.setShot("idle", true, true);
@@ -753,6 +893,98 @@ export class RaceScene {
   /** 描画直後のキャンバスを毎フレーム受け取る（録画用） */
   setFrameListener(listener: ((canvas: HTMLCanvasElement) => void) | null) {
     this.frameListener = listener;
+  }
+
+  /**
+   * レースの位置（スタートで startX、ゴールで FINISH_X）から、馬の中心（root）の x を求める。
+   * JRA の着順は鼻先（鼻端）が決勝線に達した順なので、レースの位置を鼻先の位置として描く。
+   * ゲートでは今までどおり中心が startX（鼻先は前扉の所）、ゴールの瞬間は鼻先がちょうど決勝線に来るよう、
+   * 鼻先の動く範囲を startX + 鼻先の長さ 〜 FINISH_X に合わせる（コースが 1600m で 1% 足らず縮むだけ）。
+   * Why not: 判定の線を鼻先の分だけ手前にずらすと、最後の数 m で差した馬の勝ち負けがレースの計算（中心で判定）と食い違う
+   */
+  private rootXAt(raceX: number) {
+    const fraction = (raceX - this.startX) / Math.max(1e-6, FINISH_X - this.startX);
+    const noseX = this.startX + HORSE_NOSE_REACH + fraction * (FINISH_X - this.startX - HORSE_NOSE_REACH);
+    // ゴールの後は鼻先が決勝線を過ぎてから減速していく
+    return compressAfterFinish(noseX) - HORSE_NOSE_REACH;
+  }
+
+  /** 馬をシーンから外して片付ける */
+  private removeHorse(horse: HorseModel) {
+    this.scene.remove(horse.root);
+    horse.dispose();
+  }
+
+  /**
+   * レース前の状態（パドック）にする
+   * @param reset 馬をパドックの列に並べ直す（ゲートやゴールの先から戻すとき）
+   */
+  private enterPaddock(reset: boolean) {
+    this.inPaddock = true;
+    this.mountAt = Infinity;
+    this.mounting = false;
+    if (!this.paddock) {
+      this.setShot("idle", true, true);
+      return;
+    }
+    if (reset || !this.paddock.isActive) this.paddock.setActive(true);
+    if (!this.isPaddockShot(this.shot)) this.setShot("paddockWide", true, true);
+  }
+
+  private isPaddockShot(shot: Shot) {
+    return shot === "paddockWide" || shot === "paddockFollow" || shot === "paddockEntry";
+  }
+
+  private notifyPaddockFocus(focus: PaddockFocus | null) {
+    const key = focus ? `${focus.number}:${focus.entering}` : "";
+    if (key === this.lastPaddockFocus) return;
+    this.lastPaddockFocus = key;
+    this.paddockListener?.(focus);
+  }
+
+  /**
+   * パドック中継のカット割り。全景 → 馬番の順に 1 頭ずつ寄る → 全景…。
+   * 新しい馬が入口から入ってきたら、その馬を迎えるカットに切り替え、列に加わったらそのまま寄りで映す
+   */
+  private updatePaddockCuts() {
+    const paddock = this.paddock;
+    if (!paddock || !this.isInPaddock() || this.mounting || !this.isPaddockShot(this.shot)) return;
+    const entering = paddock.enteringHorse;
+    if (entering) {
+      if (this.shot !== "paddockEntry" || this.paddockFocus !== entering) {
+        this.paddockFocus = entering;
+        this.setShot("paddockEntry", true, true);
+        this.notifyPaddockFocus({ number: entering.spec.number, entering: true });
+      }
+      return;
+    }
+    const focus = this.paddockFocus;
+    const isFocusGone = this.shot !== "paddockWide" && (!focus || !this.horses.includes(focus));
+    if (this.shot === "paddockEntry" && focus && !isFocusGone) {
+      this.setShot("paddockFollow");
+      this.notifyPaddockFocus({ number: focus.spec.number, entering: false });
+      return;
+    }
+    const sorted = [...this.horses].sort((a, b) => a.spec.number - b.spec.number);
+    if (!isFocusGone && this.shotTime < this.paddockCutLength) return;
+    if (sorted.length === 0) return;
+    if (this.shot === "paddockWide") {
+      this.paddockFollowIndex = 0;
+    } else {
+      this.paddockFollowIndex += 1;
+      if (this.paddockFollowIndex >= sorted.length || isFocusGone) {
+        this.paddockFocus = null;
+        this.setShot("paddockWide", true, true);
+        this.notifyPaddockFocus(null);
+        return;
+      }
+    }
+    // 寄りから次の馬へは、同じカメラのまま手で振って移す（パドックの中継カメラは台数が少ない）。全景からはカットで寄る
+    const isPanning = this.shot === "paddockFollow";
+    this.paddockFocus = sorted[this.paddockFollowIndex];
+    this.setShot("paddockFollow", !isPanning, true);
+    if (isPanning) this.paddockOperator.retarget();
+    this.notifyPaddockFocus({ number: this.paddockFocus.spec.number, entering: false });
   }
 
   /** 確定した結果（ニュースの原稿と結果の表に使う）。確定前は null */
@@ -859,6 +1091,7 @@ export class RaceScene {
     this.softWorld?.dispose();
     this.photoFinish.dispose();
     this.studio?.dispose();
+    this.paddock?.dispose();
     this.composer.dispose();
     releaseNoise3D();
     this.renderer.dispose();
@@ -1041,15 +1274,22 @@ export class RaceScene {
     this.shotTime = 0;
     if (shot === "jockey") this.jockeyHorse = this.pickJockeyHorse();
     if (shot === "rail") this.railCameraX = this.leaderX() + 20;
+    // パドック中継のカットの長さ。寄りは、手で振って次の馬に収まるまで（2 秒ほど）を含める
+    if (this.isPaddockShot(shot)) {
+      this.paddockCutLength = shot === "paddockWide" ? 5 + Math.random() * 2 : 4.8 + Math.random() * 2.4;
+    }
     // 勝ち馬のアップでは他馬の名前ラベルが大きく重なるので、勝ち馬のラベルだけ残す
     const winner = this.race?.winner ?? -1;
     this.horses.forEach((horse, i) => {
       // ジョッキー視点では、乗っている馬のラベルが目の前に来るので消す
       const isRidden = shot === "jockey" && i === this.jockeyHorse;
-      horse.label.visible = shot === "board" || isRidden ? false : shot !== "winner" || i === winner;
+      // パドック中継では、馬名はテロップで出す
+      horse.label.visible =
+        shot === "board" || isRidden || this.isPaddockShot(shot) ? false : shot !== "winner" || i === winner;
     });
     if (cut) {
       this.blur.markCut();
+      this.paddockOperatorSnap = true;
       this.computeShot(0);
       this.cameraBase.copy(this.desiredPos);
       this.camera.position.copy(this.desiredPos);
@@ -1060,7 +1300,7 @@ export class RaceScene {
       this.prevDesiredPos.copy(this.desiredPos);
       this.prevDesiredLook.copy(this.desiredLook);
       this.cameraRoll = SHOT_STYLES[shot].roll;
-      this.camera.fov = shot === "jockey" ? JOCKEY_FOV : this.styleFov(shot);
+      this.camera.fov = this.shotFov(shot);
       this.camera.updateProjectionMatrix();
     }
   }
@@ -1077,6 +1317,8 @@ export class RaceScene {
     if (inStudio) {
       studio.update(dt);
       studio.render();
+      // 録画はニュースの最後まで続ける（スタジオも同じキャンバスに描いている）
+      this.frameListener?.(this.renderer.domElement);
       return;
     }
     // 毛並みの模様を馬の体に貼りつけるため、今フレームの行列を確定させてから馬ごとの逆行列を渡す
@@ -1119,7 +1361,7 @@ export class RaceScene {
     this.horses.forEach((horse, i) => {
       const fraction = progresses[i] / target;
       const raw = this.startX + fraction * courseLength;
-      const x = compressAfterFinish(raw);
+      const x = this.rootXAt(raw);
       const speed = dt > 0 ? (x - this.prevWorldX[i]) / dt : 0;
       // フレーム時間の揺らぎだけ吸収する軽い平滑化
       this.speeds[i] += (speed - this.speeds[i]) * (1 - Math.exp(-realDt * 12));
@@ -1150,7 +1392,7 @@ export class RaceScene {
     const courseLength = FINISH_X - this.startX;
     const step = 1 / 60;
     const worldX = (time: number, i: number) =>
-      compressAfterFinish(this.startX + (runningPositionAt(race, i, time) / target) * courseLength);
+      this.rootXAt(this.startX + (runningPositionAt(race, i, time) / target) * courseLength);
     this.raceT = t;
     this.horses.forEach((_, i) => {
       const before = worldX(t - step * this.raceRate, i);
@@ -1227,15 +1469,46 @@ export class RaceScene {
     const leaderFraction = Math.min(1, (progresses[order[0]] ?? 0) / race.target);
     this.raceT += dt * this.raceRate;
     this.moveHorses(progresses, order, leaderFraction, dt, realDt);
+    this.showVisionAt(race, order, false);
     return dt;
   }
 
-  /** リプレイをやめて、リプレイ前の位置（ゴール後に流している所）へ戻す */
+  /**
+   * ターフビジョンに、レース内部時刻 raceT の時点の中継画面を出す（リプレイ中に、確定した着順が先に映らないように）。
+   * ゴールした時刻（crossTimes）はレース中に記録した値を使う
+   * @param final 確定の着順掲示板に戻す（リプレイの後）
+   */
+  private showVisionAt(race: RaceSimulation, order: number[], final: boolean) {
+    const labels = this.visionInfo?.labels;
+    const unitsPerTime = (FINISH_X - this.startX) / Math.max(0.1, winnerTime(race));
+    const lengthsBetween = (ahead: number, behind: number) =>
+      ((this.crossTimes[behind] - this.crossTimes[ahead]) * unitsPerTime) / HORSE_LENGTH_UNITS;
+    const crossed = final ? [...this.finishOrder] : this.finishOrder.filter((i) => this.crossTimes[i] <= this.raceT);
+    const margins = crossed
+      .slice(1)
+      .map((horse, k) => (labels ? marginLabel(lengthsBetween(crossed[k], horse), labels) : ""));
+    const finished = new Set(crossed);
+    this.environment.vision.setState({
+      mode: final ? "result" : "live",
+      placings: crossed,
+      margins,
+      finalTime: crossed.length > 0 ? formatRaceTime(this.winnerSeconds) : "",
+      clock: formatRaceClock(Math.min(this.raceT, winnerTime(race)) * this.secondsPerUnit),
+      liveOrder: [...crossed, ...order.filter((i) => !finished.has(i))],
+      photo: false,
+      confirmed: final && this.completed,
+    });
+  }
+
+  /** リプレイをやめて、リプレイ前の位置（ゴール後に流している所）へ戻し、ターフビジョンも確定の着順掲示板に戻す */
   private stopReplay() {
     const replay = this.replay;
     if (!replay) return;
     this.replay = null;
-    if (this.race) this.jumpHorsesTo(this.race, replay.savedT);
+    const race = this.race;
+    if (!race) return;
+    this.jumpHorsesTo(race, replay.savedT);
+    this.showVisionAt(race, [...this.finishOrder], true);
   }
 
   private update(realDt: number) {
@@ -1319,9 +1592,17 @@ export class RaceScene {
         });
       }
     } else {
-      this.horses.forEach((horse) => horse.update(dt, 0));
+      // パドックで周回している間は、パドックが馬を歩かせる
+      if (!this.paddock?.isActive) this.horses.forEach((horse) => horse.update(dt, 0));
       this.excitement *= 0.98;
     }
+
+    this.paddock?.update(dt, this.time);
+    if (this.time >= this.mountAt) {
+      this.mountAt = Infinity;
+      for (const horse of this.horses) horse.setJockeyVisible(true);
+    }
+    this.updatePaddockCuts();
 
     this.updateFocus(realDt);
     this.gate?.update(dt);
@@ -1383,6 +1664,10 @@ export class RaceScene {
     this.prevFieldX = meanX;
     this.blur.setField(this.fieldMin, this.fieldMax, this.fieldDelta);
 
+    if (this.isOperatedShot(this.shot)) {
+      this.updatePaddockFocus();
+      return;
+    }
     const focusDistance = this.camera.position.distanceTo(this.lookAt);
     const closeUp = this.shot === "winner" || this.shot === "gate" || this.shot === "idle" || this.shot === "board";
     // 画面がかすんで見えないよう、ぶれは速く流れる手前の地面や柵に出る程度、ぼけは寄りのカットの遠景に出る程度に抑える
@@ -1392,6 +1677,65 @@ export class RaceScene {
       focusRange: focusDistance * (closeUp ? 0.45 : 1.2),
       maxCoc: this.shot === "board" ? 0.002 : closeUp ? 0.0035 : 0.001,
     });
+  }
+
+  /**
+   * パドックの寄りと入場のピント。カメラマンが手で合わせた距離（CameraOperator）に合わせる。
+   * 望遠なので被写界深度は浅く、馬の前後の芝や柵は少しぼける
+   */
+  private updatePaddockFocus() {
+    const horse = this.paddockFocus;
+    const distance = horse
+      ? this.camera.position.distanceTo(horse.root.position)
+      : this.camera.position.distanceTo(this.lookAt);
+    const isHunting = this.paddockOperator.timeSinceRetarget < PADDOCK_HUNT_SECONDS;
+    this.blur.setSettings({
+      // 振っている間は流れて見えるよう、シャッターを長めに
+      shutter: 0.15 + 0.25 * this.paddockPanAmount,
+      focusDistance: this.paddockOperator.focusDistance,
+      focusRange: distance * 0.22,
+      // ピントを探っている間は、外れたときのぼけを大きく（はっきりピンぼけに見える）
+      maxCoc: isHunting ? 0.005 : 0.0025,
+    });
+  }
+
+  /** パドックの寄りと入場のカットは、カメラマンが手で操作する */
+  private isOperatedShot(shot: Shot) {
+    return shot === "paddockFollow" || shot === "paddockEntry";
+  }
+
+  /** カットの画角（パドックの寄りと入場は、カメラマンが合わせたズーム） */
+  private shotFov(shot: Shot) {
+    if (shot === "jockey") return JOCKEY_FOV;
+    if (this.isOperatedShot(shot)) return this.paddockOperator.fov;
+    return this.styleFov(shot);
+  }
+
+  /** カメラマンに渡す、今の馬とカメラの様子 */
+  private operatorFrame(horse: HorseModel, camera: THREE.Vector3): OperatorFrame {
+    const p = horse.root.position;
+    // 寄りは馬の体（高さ 2.4・長さ 2.4）が画面の高さの半分ほど、入場は通路ごと少し広めに見える画角
+    const halfHeight = this.shot === "paddockEntry" ? 4.6 : 3.4;
+    const distance = camera.distanceTo(p);
+    return {
+      subject: p,
+      subjectVelocity: this.paddockSubjectVelocity,
+      camera,
+      idealFov: THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(halfHeight / distance)), 6, 34),
+      aspect: this.camera.aspect,
+    };
+  }
+
+  /** カメラマンを 1 フレーム進める（追っている馬の歩く速さも測る） */
+  private updatePaddockOperator(dt: number) {
+    const horse = this.paddockFocus;
+    if (!horse) return;
+    const p = horse.root.position;
+    this.paddockSubjectVelocity.subVectors(p, this.paddockSubjectPrev).divideScalar(Math.max(dt, 1e-3));
+    // 次の馬へ振った直後は、前の馬との差を速さとみなさない
+    if (this.paddockSubjectVelocity.length() > 6) this.paddockSubjectVelocity.set(0, 0, 0);
+    this.paddockSubjectPrev.copy(p);
+    this.paddockOperator.update(dt, this.operatorFrame(horse, this.cameraBase));
   }
 
   /**
@@ -1529,14 +1873,10 @@ export class RaceScene {
     vision.renderVideo(this.renderer, this.scene);
   }
 
+  /** 先頭の進み具合から、このレースのカメラワークの型のカットを映す */
   private chooseRaceShot(fraction: number) {
-    if (fraction < 0.12) this.setShot("chase", false);
-    else if (fraction < 0.26) this.setShot("side");
-    else if (fraction < 0.38) this.setShot("jockey");
-    else if (fraction < 0.5) this.setShot("aerial");
-    else if (fraction < 0.62) this.setShot("rail");
-    else if (fraction < 0.78) this.setShot("headon");
-    else this.setShot("stretch");
+    if (!this.cameraPlan) return;
+    this.setShot(shotForFraction(this.cameraPlan, fraction));
   }
 
   /**
@@ -1584,6 +1924,40 @@ export class RaceScene {
     const lx = this.leaderX();
     const winnerIdx = this.race?.winner ?? -1;
     switch (this.shot) {
+      case "paddockWide": {
+        // ターフビジョンの右から、パドックを斜め上に見下ろす（ゆっくり横へ流しながら降りる）
+        const c = PADDOCK_CENTER;
+        this.desiredPos.set(c.x + 44 + Math.sin(t * 0.08) * 6, 21 - Math.min(t, 6) * 0.5, c.z - 60);
+        this.desiredLook.set(c.x - 4, 1.2, c.z + 2);
+        break;
+      }
+      case "paddockFollow":
+      case "paddockEntry": {
+        const horse = this.paddockFocus;
+        if (!horse) break;
+        const p = horse.root.position;
+        const c = PADDOCK_CENTER;
+        if (this.shot === "paddockFollow") {
+          // 手前（走路側）の段々の上の中継カメラから、馬を追って振り、望遠で寄る。
+          // カメラマンはほぼ同じ所に立ったまま振る（馬の動きに合わせて少しだけ横へ歩く）
+          const radius = this.paddock?.stadium.radius ?? 18;
+          this.desiredPos.set(c.x + THREE.MathUtils.clamp(p.x - c.x, -30, 30) * 0.3, 6.5, c.z - (radius + 15.5));
+        } else {
+          // 入口の通路の横から、入ってくる馬を迎える
+          const gate = this.paddock?.entranceGate(this.paddockTmp) ?? this.paddockTmp.copy(c);
+          this.desiredPos.set(gate.x - 9, 3.2, gate.z - 14);
+        }
+        // 向ける所・ズーム・ピントはカメラマンが手で合わせる（カットで入ったときだけ、最初から合わせておく）
+        if (this.paddockOperatorSnap) {
+          this.paddockOperatorSnap = false;
+          this.paddockSubjectPrev.copy(p);
+          this.paddockSubjectVelocity.set(0, 0, 0);
+          this.paddockOperator.snap(this.operatorFrame(horse, this.desiredPos));
+        }
+        const aim = this.paddockOperator.aim;
+        this.desiredLook.set(aim.x, aim.y, aim.z);
+        break;
+      }
       case "idle": {
         // クレーン: 高い所からゲートのまわりを回りながら、ゆっくり降りてくる
         const a = t * 0.06 + 0.6;
@@ -1602,11 +1976,21 @@ export class RaceScene {
         this.desiredPos.set(Math.max(sx + 36, lx + 14), 0.75, -2.5);
         this.desiredLook.set(Math.max(px, sx + 2), 1.5, 0);
         break;
-      case "side":
-        // 外ラチの外から望遠の横移動。外周の生垣（高さ 1.6）越しに脚元まで見えるよう、少し高い所から撮る
-        this.desiredPos.set(px - 1 + Math.sin(t * 0.35) * 1.5, 4.4, -(TRACK_HALF_WIDTH + 22));
+      case "side": {
+        // 外ラチの外から望遠の横移動。外周の生垣（高さ 1.6）越しに脚元まで見えるよう、少し高い所から撮る。
+        // 馬群がスタンドの前に来たら、スタンド前の広場（生垣はない）までゆっくり寄って低く撮る。
+        // Why not: 外の位置のままだと、カメラがスタンドの段々と建物の中に入り、画面が壁一色になる
+        const nearStands =
+          THREE.MathUtils.smoothstep(px, STANDS.start - 40, STANDS.start - 12) *
+          (1 - THREE.MathUtils.smoothstep(px, STANDS.end + 12, STANDS.end + 40));
+        this.desiredPos.set(
+          px - 1 + Math.sin(t * 0.35) * 1.5,
+          THREE.MathUtils.lerp(4.4, 2.8, nearStands),
+          -THREE.MathUtils.lerp(TRACK_HALF_WIDTH + 22, TRACK_HALF_WIDTH + 6.5, nearStands)
+        );
         this.desiredLook.set(px + 2.5, 1.3, 0);
         break;
+      }
       case "jockey": {
         const rider = this.horses[this.jockeyHorse];
         if (rider) rider.root.updateMatrixWorld(true);
@@ -1698,6 +2082,7 @@ export class RaceScene {
 
   private updateCamera(dt: number) {
     this.shotTime += dt;
+    if (this.isOperatedShot(this.shot)) this.updatePaddockOperator(dt);
     this.computeShot(this.shotTime);
     const style = SHOT_STYLES[this.shot];
     // 狙いが動く速さ（馬群を追うカットでは毎秒 16 単位ほど）。急に飛んだときは速さとみなさない
@@ -1724,15 +2109,16 @@ export class RaceScene {
       // 臨界減衰のバネで追う（行き過ぎず、動き出しと止まりがなめらか）。
       // 狙いの動く速さも合わせて追うので、一定の速さで走る馬群には遅れずに付いていく（速さを合わせないと 2 × 速さ ÷ ω だけ遅れる）
       const omega = style.follow;
+      const zeta = style.damping ?? 1;
       const step = (
         current: THREE.Vector3,
         target: THREE.Vector3,
         velocity: THREE.Vector3,
         targetVel: THREE.Vector3
       ) => {
-        const ax = (target.x - current.x) * omega * omega + 2 * omega * (targetVel.x - velocity.x);
-        const ay = (target.y - current.y) * omega * omega + 2 * omega * (targetVel.y - velocity.y);
-        const az = (target.z - current.z) * omega * omega + 2 * omega * (targetVel.z - velocity.z);
+        const ax = (target.x - current.x) * omega * omega + 2 * zeta * omega * (targetVel.x - velocity.x);
+        const ay = (target.y - current.y) * omega * omega + 2 * zeta * omega * (targetVel.y - velocity.y);
+        const az = (target.z - current.z) * omega * omega + 2 * zeta * omega * (targetVel.z - velocity.z);
         velocity.x += ax * dt;
         velocity.y += ay * dt;
         velocity.z += az * dt;
@@ -1742,7 +2128,7 @@ export class RaceScene {
       step(this.lookAt, this.desiredLook, this.lookVelocity, this.desiredLookVelocity);
       // カメラのすぐそばを通る馬のラベルは大きくなりすぎるので隠す。勝ち馬のアップは勝ち馬のラベルだけ、寄りすぎたら隠す
       // （掲示板のカットは setShot で決めた表示のまま）
-      if (this.shot !== "board") {
+      if (this.shot !== "board" && !this.isPaddockShot(this.shot)) {
         const winner = this.race?.winner ?? -1;
         this.horses.forEach((horse, i) => {
           const isNear = horse.root.position.distanceTo(this.cameraBase) < (this.shot === "winner" ? 11 : 8);
@@ -1750,17 +2136,26 @@ export class RaceScene {
         });
       }
     }
-    // 画角と傾きは撮り方へなめらかに寄せる
-    const fov = this.shot === "jockey" ? JOCKEY_FOV : this.styleFov(this.shot);
-    if (Math.abs(this.camera.fov - fov) > 0.01) {
+    // パドックのカメラマンが振っている間（向いている所と狙いが離れている間）は、揺れとぶれが大きくなる
+    const isOperated = this.isOperatedShot(this.shot);
+    this.paddockPanAmount = isOperated ? THREE.MathUtils.clamp(this.lookAt.distanceTo(this.desiredLook) / 10, 0, 1) : 0;
+    // 画角と傾きは撮り方へなめらかに寄せる。カメラマンが操作するカットは、ズームを手で動かしているのでそのまま使う
+    const fov = this.shotFov(this.shot);
+    if (isOperated) {
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    } else if (Math.abs(this.camera.fov - fov) > 0.01) {
       this.camera.fov += (fov - this.camera.fov) * (1 - Math.exp(-dt * 3));
       this.camera.updateProjectionMatrix();
     }
     this.cameraRoll += (style.roll - this.cameraRoll) * (1 - Math.exp(-dt * 2));
     // 見えるカメラは、バネで動かした位置に手持ちの揺れを足した所
-    this.camera.position.copy(this.cameraBase).add(this.handheld(style.shake, this.shakeOffset));
+    const shake = style.shake + PADDOCK_PAN_SHAKE * this.paddockPanAmount;
+    this.camera.position.copy(this.cameraBase).add(this.handheld(shake, this.shakeOffset));
     this.camera.lookAt(this.lookAt);
-    this.camera.rotateZ(this.cameraRoll);
+    // 手で振っている間は、水平も少しふらつく
+    const panWobble = Math.sin(this.time * 5.3) * 0.012 * this.paddockPanAmount;
+    this.camera.rotateZ(this.cameraRoll + panWobble);
 
     // 影はカメラの注視点付近だけ高解像度で落とす
     const dir = this.sun.userData.dir as THREE.Vector3;

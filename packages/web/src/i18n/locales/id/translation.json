@@ -106,7 +106,7 @@
     },
     "courseLabel": "{{surface}} {{meters}}m {{category}} · {{going}}",
     "start": "Mulai!",
-    "reset": "Kembali ke gerbang",
+    "reset": "Kembali ke paddock",
     "loading": "Menyiapkan arena pacuan…",
     "webglError": "Browser Anda tidak mendukung grafis 3D, jadi mode Pacuan tidak dapat ditampilkan.",
     "needTwo": "Tambahkan minimal 2 kuda untuk balapan",
@@ -188,7 +188,8 @@
     },
     "video": {
       "save": "Simpan video",
-      "downloaded": "Video balapan berhasil diunduh!"
+      "downloaded": "Video balapan berhasil diunduh!",
+      "recording": "Merekam sampai berita selesai…"
     },
     "vision": {
       "title": "Roulette Stakes",
@@ -263,6 +264,12 @@
       },
       "vtrMark": "VTR",
       "endCard": "Sampai jumpa di balapan berikutnya"
+    },
+    "paddock": {
+      "title": "PADDOCK",
+      "entering": "MASUK",
+      "call": "Joki, naik!",
+      "weight": "{{weight}}kg ({{change}})"
     }
   }
 }

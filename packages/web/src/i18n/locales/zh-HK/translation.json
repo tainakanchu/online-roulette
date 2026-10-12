@@ -106,7 +106,7 @@
     },
     "courseLabel": "{{surface}} {{meters}}米 {{category}}・{{going}}",
     "start": "出閘！",
-    "reset": "返回閘廂",
+    "reset": "返去檢閱場",
     "loading": "馬場準備中…",
     "webglError": "你的瀏覽器不支援 3D 顯示，無法使用賽馬模式。",
     "needTwo": "至少需要 2 匹馬才能出賽",
@@ -188,7 +188,8 @@
     },
     "video": {
       "save": "儲存影片",
-      "downloaded": "已下載賽事片段！"
+      "downloaded": "已下載賽事片段！",
+      "recording": "錄緊影（直到新聞完結）…"
     },
     "vision": {
       "title": "輪盤盃",
@@ -263,6 +264,12 @@
       },
       "vtrMark": "VTR",
       "endCard": "下場賽事再見"
+    },
+    "paddock": {
+      "title": "檢閱場",
+      "entering": "入場",
+      "call": "騎師上馬！",
+      "weight": "{{weight}}kg（{{change}}）"
     }
   }
 }

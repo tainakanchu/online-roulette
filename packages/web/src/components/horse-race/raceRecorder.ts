@@ -1,4 +1,6 @@
-// レース映像を 2D キャンバスに合成して MediaRecorder で録画する
+// レース映像を 2D キャンバスに合成して MediaRecorder で録画する（1080p・H.264 の MP4 を優先）
+
+import { drawBlackout, drawNews, RECORDER_FONT, roundRect, type RecorderBlackout, type RecorderNews } from "./recorderNews";
 
 export interface RecorderOverlay {
   /** 実況テキスト */
@@ -9,6 +11,10 @@ export interface RecorderOverlay {
   order: Array<{ number: number; color: string }>;
   /** 確定後の上位着順 */
   result: { title: string; rows: Array<{ rank: string; number: number; color: string; name: string }> } | null;
+  /** レース後のニュースの今のカット（ニュースの間だけ） */
+  news: RecorderNews | null;
+  /** 競馬場とスタジオの切り替えに挟む黒 */
+  blackout: RecorderBlackout;
 }
 
 export interface RaceVideo {
@@ -16,8 +22,12 @@ export interface RaceVideo {
   extension: string;
 }
 
+// H.264 は 1080p・30fps を録れるレベル 4.0（avc1.xx0028）で、画質の良い High → Main → Baseline の順に試す。
+// H.264 で録れないブラウザ（Firefox など）は WebM（VP9 / VP8）にする
 const FORMATS = [
-  { mimeType: "video/mp4;codecs=avc1.42E01E", extension: "mp4" },
+  { mimeType: "video/mp4;codecs=avc1.640028", extension: "mp4" },
+  { mimeType: "video/mp4;codecs=avc1.4D0028", extension: "mp4" },
+  { mimeType: "video/mp4;codecs=avc1.42E028", extension: "mp4" },
   { mimeType: "video/mp4;codecs=avc1", extension: "mp4" },
   { mimeType: "video/mp4", extension: "mp4" },
   { mimeType: "video/webm;codecs=vp9", extension: "webm" },
@@ -26,8 +36,28 @@ const FORMATS = [
 ];
 
 const FPS = 30;
-const MAX_WIDTH = 1280;
-const FONT = `"Hiragino Sans", "Noto Sans JP", "Noto Sans TC", system-ui, sans-serif`;
+/** 録画の大きさ（1080p）。実況・テロップの文字はこの大きさで描くので、画面が小さくても潰れない */
+const VIDEO_WIDTH = 1920;
+const VIDEO_HEIGHT = 1080;
+/** 1080p・30fps の H.264 で、文字と芝の細かい所が崩れないビットレート（YouTube の 1080p の推奨値と同じ） */
+const VIDEO_BITS_PER_SECOND = 8_000_000;
+/**
+ * 画面を 16:9 に合わせるとき、上下（左右）を切り落としてよい割合の上限。
+ * 16:10 のノート PC なら上下を 5% ずつ切って画面いっぱいに映し、これより多く切れる縦長・横長の画面は黒い帯を足して全体を収める
+ */
+const MAX_CROP = 0.15;
+const FONT = RECORDER_FONT;
+
+/** 画面の映像を録画の枠（16:9）のどこに描くか */
+const fitSource = (sourceWidth: number, sourceHeight: number) => {
+  const cover = Math.max(VIDEO_WIDTH / sourceWidth, VIDEO_HEIGHT / sourceHeight);
+  const visible = Math.min(VIDEO_WIDTH / (sourceWidth * cover), VIDEO_HEIGHT / (sourceHeight * cover));
+  const isCropSmall = 1 - visible <= MAX_CROP;
+  const scale = isCropSmall ? cover : Math.min(VIDEO_WIDTH / sourceWidth, VIDEO_HEIGHT / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+  return { x: (VIDEO_WIDTH - width) / 2, y: (VIDEO_HEIGHT - height) / 2, width, height, isLetterboxed: !isCropSmall };
+};
 
 const pickFormat = () => {
   if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") return null;
@@ -40,7 +70,14 @@ export const isRaceRecordingSupported = (): boolean =>
   pickFormat() !== null;
 
 export class RaceRecorder {
-  overlay: RecorderOverlay = { commentary: "", status: "", order: [], result: null };
+  overlay: RecorderOverlay = {
+    commentary: "",
+    status: "",
+    order: [],
+    result: null,
+    news: null,
+    blackout: { kind: "none", since: 0 },
+  };
   private readonly canvas = document.createElement("canvas");
   private readonly ctx = this.canvas.getContext("2d");
   private readonly format = pickFormat();
@@ -56,10 +93,21 @@ export class RaceRecorder {
     const now = performance.now();
     if (now - this.lastFrameAt < 1000 / FPS - 2) return;
     this.lastFrameAt = now;
-    if (!this.recorder) this.begin(source);
+    if (!this.recorder) this.begin();
+    const ctx = this.ctx;
     const { width, height } = this.canvas;
-    this.ctx.drawImage(source, 0, 0, width, height);
+    const fit = fitSource(source.width, source.height);
+    if (fit.isLetterboxed) {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, width, height);
+    }
+    // 拡大・縮小で輪郭が崩れないよう、高品質の補間で描く
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(source, fit.x, fit.y, fit.width, fit.height);
     this.drawOverlay(width, height);
+    if (this.overlay.news) drawNews(ctx, this.overlay.news, width, height, now);
+    drawBlackout(ctx, this.overlay.blackout, width, height, now);
   }
 
   /** 録画を止めて動画を返す（1 フレームも撮れていなければ null） */
@@ -94,15 +142,13 @@ export class RaceRecorder {
     this.release();
   }
 
-  private begin(source: HTMLCanvasElement) {
-    const scale = Math.min(1, MAX_WIDTH / source.width);
-    // H.264 は偶数サイズが必要
-    this.canvas.width = Math.round((source.width * scale) / 2) * 2;
-    this.canvas.height = Math.round((source.height * scale) / 2) * 2;
+  private begin() {
+    this.canvas.width = VIDEO_WIDTH;
+    this.canvas.height = VIDEO_HEIGHT;
     this.stream = this.canvas.captureStream(FPS);
     this.recorder = new MediaRecorder(this.stream, {
       mimeType: this.format?.mimeType,
-      videoBitsPerSecond: 6_000_000,
+      videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
     });
     this.recorder.ondataavailable = (event) => {
       if (event.data.size > 0) this.chunks.push(event.data);
@@ -212,13 +258,3 @@ export class RaceRecorder {
     ctx.shadowBlur = 0;
   }
 }
-
-const roundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-};

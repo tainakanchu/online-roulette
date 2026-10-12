@@ -21,6 +21,10 @@ export interface DetailOptions {
   roughness?: string;
   /** 高さ（detail.a）による凹凸の強さ。0 で凹凸なし */
   bump?: number;
+  /** 色や粗さの GLSL で使う追加の uniform（例: 馬場の濡れ具合 uWetness） */
+  uniforms?: Record<string, THREE.IUniform>;
+  /** 追加の uniform の GLSL の宣言 */
+  declarations?: string;
 }
 
 /**
@@ -32,6 +36,7 @@ export const addDetail = <T extends THREE.MeshStandardMaterial>(material: T, opt
   const bump = options.bump ?? 0;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uDetail = { value: options.texture };
+    if (options.uniforms) Object.assign(shader.uniforms, options.uniforms);
     shader.vertexShader = shader.vertexShader
       .replace(
         "#include <common>",
@@ -50,6 +55,7 @@ export const addDetail = <T extends THREE.MeshStandardMaterial>(material: T, opt
         `#include <common>
         uniform highp sampler3D uDetail;
         varying vec3 vDetailPos;
+        ${options.declarations ?? ""}
         // 高さの勾配から法線を傾ける（three.js の bumpmap と同じ求め方。UV がいらない）
         vec3 detailBump(vec3 surfPos, vec3 surfNorm, vec2 dHdxy, float faceDir) {
           vec3 sigmaX = dFdx(surfPos);

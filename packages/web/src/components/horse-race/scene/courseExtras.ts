@@ -218,6 +218,10 @@ const createDetailMaterial = (
   return material;
 };
 
+/** 生垣・低木の葉の材質（パドックの植え込みでも使う） */
+export const createFoliageMaterial = (uniforms: CourseUniforms, foliage: THREE.Data3DTexture, color = "#447f36") =>
+  createDetailMaterial(uniforms, foliage, FOLIAGE, { color, roughness: 0.9 });
+
 /**
  * コース全般の備品を組み立てる。ジオメトリとマテリアルは使い回し、発走地点が変わったら距離で動くものだけを置き直す
  */
@@ -235,6 +239,11 @@ export class CourseExtras {
   private readonly up = new THREE.Vector3(0, 1, 0);
   /** 物理エンジンで布を動かす旗。物理エンジンを読み込むまでは null で、旗は頂点シェーダーでなびかせる */
   private clothFlags: ClothFlags | null = null;
+
+  /** 生垣の葉の 3D テクスチャ（パドックの植え込みでも同じものを使う） */
+  get foliage() {
+    return this.textures.foliage;
+  }
 
   constructor(
     private readonly models: CourseExtraModels,

@@ -52,6 +52,11 @@ export const STANDS = { start: FINISH_X - 130, end: FINISH_X + 60 };
 export const POND = { x: FINISH_X * 0.45, z: TRACK_HALF_WIDTH + 34, radiusX: 55, radiusZ: 16 };
 /** ターフビジョンの構造物の原点（画面の中心の真下の地面） */
 export const VISION_BASE = { x: FINISH_X - 50, z: TRACK_HALF_WIDTH + 26 };
+/**
+ * パドック（paddock.ts）の場所。内馬場のターフビジョンの裏で、レース中のゴール前のカットにも映り込む。
+ * x・z は中心、halfX・halfZ は広場を含む範囲の半分（ここには木を植えない）
+ */
+export const PADDOCK_AREA = { x: VISION_BASE.x + 15, z: VISION_BASE.z + 38.5, halfX: 80, halfZ: 52 };
 /** 芝の刈り込みの縞 1 周期（明暗 1 組）の長さ */
 const TURF_STRIPE_PERIOD = 16;
 
@@ -384,7 +389,18 @@ export const createEnvironment = (sunDirection: THREE.Vector3, options: Environm
       weight: 0.25,
     },
   ];
-  const treeCount = 560;
+  // 内馬場・スタンド側・コースの両端に散らす木と、パドックの裏の木立（パドック中継の映像の背景になる）
+  const scatteredTreeCount = 560;
+  const paddockGroveCount = 110;
+  const treeCount = scatteredTreeCount + paddockGroveCount;
+  const paddockBack = PADDOCK_AREA.z + PADDOCK_AREA.halfZ;
+  // 木立はいくつかの茂みに分け、茂みの間に少しすき間を残す（一面に同じ密度で並べると植林のように見える）
+  const groveClumps = Array.from({ length: 8 }, (_, k) => ({
+    x: PADDOCK_AREA.x - PADDOCK_AREA.halfX - 15 + ((k + 0.5) * (PADDOCK_AREA.halfX + 15) * 2) / 8 + (Math.random() - 0.5) * 10,
+    z: paddockBack + 9 + Math.random() * 14,
+  }));
+  /** 平均 0・標準偏差およそ 1 の乱数（一様乱数を 3 つ足す） */
+  const gaussian = () => (Math.random() + Math.random() + Math.random() - 1.5) * 2;
   const treeSpecies = Array.from({ length: treeCount }, () => {
     const roll = Math.random();
     let acc = 0;
@@ -415,18 +431,28 @@ export const createEnvironment = (sunDirection: THREE.Vector3, options: Environm
   const proceduralTrees = new THREE.Group();
   for (let i = 0; i < treeCount; i += 1) {
     // 内馬場の奥、スタンド側の奥（スタンドの後ろの建物より外）、コースの両端
-    const roll = i / treeCount;
-    const infield = roll < 0.5;
-    const standSide = !infield && roll < 0.82;
-    const x =
+    const isGrove = i >= scatteredTreeCount;
+    const roll = i / scatteredTreeCount;
+    const infield = !isGrove && roll < 0.5;
+    const standSide = !isGrove && !infield && roll < 0.82;
+    let x =
       infield || standSide
         ? COURSE_START - 90 + Math.random() * (COURSE_END - COURSE_START + 200)
         : (Math.random() < 0.5 ? COURSE_START - 50 : FINISH_X + 170) + (Math.random() - 0.5) * 60;
-    const z = infield
+    let z = infield
       ? TRACK_HALF_WIDTH + 55 + Math.random() * 90
       : standSide
         ? -(TRACK_HALF_WIDTH + 48 + Math.random() * 100)
         : (Math.random() - 0.5) * 160;
+    if (isGrove) {
+      const clump = groveClumps[Math.floor(Math.random() * groveClumps.length)];
+      x = clump.x + gaussian() * 9;
+      z = Math.max(paddockBack + 2, clump.z + gaussian() * 7);
+    }
+    // 内馬場のパドックの敷地には植えない。敷地に重なる木はパドックの裏へずらして、裏の木立を厚くする
+    const isOnPaddock =
+      infield && Math.abs(x - PADDOCK_AREA.x) < PADDOCK_AREA.halfX && Math.abs(z - PADDOCK_AREA.z) < PADDOCK_AREA.halfZ;
+    if (isOnPaddock) z = paddockBack + 4 + Math.random() * 30;
     const s = 0.8 + Math.random() * 1.1;
     const sp = species[treeSpecies[i]];
     const target = crowns[treeSpecies[i]];
@@ -451,8 +477,10 @@ export const createEnvironment = (sunDirection: THREE.Vector3, options: Environm
       scale: s,
       angle,
       species: treeSpecies[i],
-      // 内馬場の手前の列だけ細かいモデルにする（奥や走路の両端の木は遠くからしか映らない）
-      detailed: options.detailedTrees && z > 0 && z < TRACK_HALF_WIDTH + 85,
+      // 内馬場の手前の列と、パドックの裏の木立の手前（パドック中継の望遠で映る）だけ細かいモデルにする
+      // （奥や走路の両端の木は遠くからしか映らない）
+      detailed:
+        options.detailedTrees && ((z > 0 && z < TRACK_HALF_WIDTH + 85) || (isGrove && z < paddockBack + 14)),
       tint: new THREE.Color(0.9 + Math.random() * 0.15, 0.9 + Math.random() * 0.15, 0.85 + Math.random() * 0.1),
     });
   }
