@@ -82,8 +82,31 @@
       "long": "長距離",
       "extended": "超長距離"
     },
+    "course": {
+      "surface": "跑道",
+      "going": "場地",
+      "surfaces": {
+        "turf": "草地",
+        "dirt": "泥地"
+      },
+      "goings": {
+        "turf": {
+          "firm": "良",
+          "good": "稍重",
+          "yielding": "重",
+          "soft": "不良"
+        },
+        "dirt": {
+          "firm": "良",
+          "good": "稍重",
+          "yielding": "重",
+          "soft": "不良"
+        }
+      }
+    },
+    "courseLabel": "{{surface}} {{meters}}公尺 {{category}}・{{going}}",
     "start": "出閘！",
-    "reset": "回到閘門",
+    "reset": "回到檢閱場",
     "loading": "馬場準備中…",
     "webglError": "你的瀏覽器不支援 3D 顯示，無法使用賽馬模式。",
     "needTwo": "至少需要 2 匹馬才能出賽",
@@ -105,7 +128,7 @@
       "raceNameLabel": "賽事名稱",
       "gradeLabel": "級別",
       "gradeNone": "無",
-      "course": "草地 {{meters}}公尺（{{category}}）",
+      "course": "{{surface}} {{meters}}公尺（{{category}}）・{{going}}",
       "field": "{{count}} 匹出賽",
       "headlines": {
         "front": "本報首選{{name}}，力拚一路領先到底",
@@ -127,7 +150,13 @@
       "debut": "初出",
       "note": "※ 評分根據近績及 GitHub 晨操資料計算。賠率為模擬估算，評分只會稍微影響賽果。",
       "clearHistory": "重設戰績（{{count}} 場）",
-      "clearConfirm": "確定刪除所有賽事紀錄？"
+      "clearConfirm": "確定刪除所有賽事紀錄？",
+      "wind": "風 {{speed}}m/s（直線{{stretch}}）",
+      "windStretch": {
+        "tailwind": "順風",
+        "headwind": "逆風",
+        "crosswind": "側風"
+      }
     },
     "github": {
       "title": "GitHub 晨操資料",
@@ -159,11 +188,23 @@
     },
     "video": {
       "save": "儲存影片",
-      "downloaded": "已下載比賽影片！"
+      "downloaded": "已下載比賽影片！",
+      "recording": "錄影中（到新聞結束為止）…"
     },
     "vision": {
       "title": "輪盤盃",
-      "result": "正式賽果"
+      "racePrefix": "第",
+      "raceSuffix": "場",
+      "time": "時間",
+      "going": "場地",
+      "official": "確定",
+      "photo": "攝影",
+      "live": "輪盤實況",
+      "nose": "鼻差",
+      "head": "頭差",
+      "neck": "頸差",
+      "distance": "大差",
+      "photoFinish": "攝影判定"
     },
     "commentary": {
       "gate": "各馬已經入閘…",
@@ -176,6 +217,59 @@
       "close": "{{first}}和{{second}}，並駕齊驅！",
       "finish": "{{name}}衝過終點！",
       "photo": "幾乎同時衝線！照相判定…勝出的是{{name}}！"
+    },
+    "news": {
+      "skip": "跳過新聞",
+      "corner": "賽馬",
+      "vtr": {
+        "front": "{{winner}}起步後隨即領放，一路領先到終點。",
+        "stalker": "{{winner}}守在前列，直路上脫穎而出。",
+        "closer": "{{winner}}在中段保留腳力，直路上強勢追過。",
+        "deep": "{{winner}}原本包尾，直路從大外疊一口氣追上。"
+      },
+      "resultTitle": "賽果",
+      "lengths": "{{margin}}個馬身",
+      "telop": {
+        "headline": "{{race}}　{{winner}}奪冠",
+        "vtr": "{{race}}（{{course}}）",
+        "time": "冠軍時間 {{time}}（{{course}}）"
+      },
+      "headline": {
+        "photo": "{{race}}陷入攝影判定的激烈纏鬥，最後由{{winner}}勝出。",
+        "rout": "{{race}}由{{winner}}以{{margin}}大勝。",
+        "upset": "{{race}}爆出冷門，第{{popularity}}熱門的{{winner}}奪冠。",
+        "favorite": "{{race}}由頭號熱門{{winner}}不負眾望奪冠。",
+        "standard": "{{race}}由{{winner}}奪冠。"
+      },
+      "result": {
+        "placings": "第二名是{{second}}，第三名是{{third}}。冠軍時間{{time}}。",
+        "second": "第二名是{{second}}。冠軍時間{{time}}。"
+      },
+      "comment": {
+        "photo": "直到最後都讓人目不轉睛的精彩比賽。",
+        "rout": "贏得非常漂亮，期待牠的下一場比賽。",
+        "upset": "真是出人意料的結果。",
+        "favorite": "果然名不虛傳。",
+        "standard": "精彩的一場比賽。"
+      },
+      "closing": "以上是賽馬新聞。",
+      "bigMargin": "大差距",
+      "cue": {
+        "next": "接下來VTR",
+        "hurry": "請加快！",
+        "left": "剩{{seconds}}秒",
+        "ten": "倒數10秒",
+        "five": "倒數5秒",
+        "break": "進廣告"
+      },
+      "vtrMark": "VTR",
+      "endCard": "下一場比賽見"
+    },
+    "paddock": {
+      "title": "檢閱場",
+      "entering": "入場",
+      "call": "騎師上馬！",
+      "weight": "{{weight}}kg（{{change}}）"
     }
   }
 }

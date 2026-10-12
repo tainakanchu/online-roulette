@@ -82,8 +82,31 @@
       "long": "長距離",
       "extended": "超長距離"
     },
+    "course": {
+      "surface": "コース",
+      "going": "馬場",
+      "surfaces": {
+        "turf": "芝",
+        "dirt": "ダート"
+      },
+      "goings": {
+        "turf": {
+          "firm": "良",
+          "good": "稍重",
+          "yielding": "重",
+          "soft": "不良"
+        },
+        "dirt": {
+          "firm": "良",
+          "good": "稍重",
+          "yielding": "重",
+          "soft": "不良"
+        }
+      }
+    },
+    "courseLabel": "{{surface}} {{meters}}m {{category}}・{{going}}",
     "start": "出走！",
-    "reset": "ゲートに戻す",
+    "reset": "パドックに戻す",
     "loading": "競馬場を準備中…",
     "webglError": "3D 表示に対応していないブラウザのため、競馬モードを表示できません。",
     "needTwo": "2頭以上で出走できます",
@@ -105,7 +128,7 @@
       "raceNameLabel": "レース名",
       "gradeLabel": "格付け",
       "gradeNone": "なし",
-      "course": "芝 {{meters}}m（{{category}}）",
+      "course": "{{surface}} {{meters}}m（{{category}}）・{{going}}",
       "field": "{{count}}頭立て",
       "headlines": {
         "front": "{{name}}が本紙◎。ハナを切って逃げ切りを狙う",
@@ -127,7 +150,13 @@
       "debut": "初出走",
       "note": "※ 能力は近走成績と GitHub 調教データから算出。オッズはシミュレーションによる推定値です。能力差は勝敗に少しだけ影響します。",
       "clearHistory": "戦績をリセット（{{count}}レース）",
-      "clearConfirm": "これまでの戦績をすべて削除しますか？"
+      "clearConfirm": "これまでの戦績をすべて削除しますか？",
+      "wind": "風 {{speed}}m/s（直線{{stretch}}）",
+      "windStretch": {
+        "tailwind": "追い風",
+        "headwind": "向かい風",
+        "crosswind": "横風"
+      }
     },
     "github": {
       "title": "GitHub 調教データ",
@@ -159,11 +188,23 @@
     },
     "video": {
       "save": "動画を保存",
-      "downloaded": "レース動画をダウンロードしました!"
+      "downloaded": "レース動画をダウンロードしました!",
+      "recording": "ニュースの終わりまで録画中…"
     },
     "vision": {
       "title": "ルーレット記念",
-      "result": "着順確定"
+      "racePrefix": "第",
+      "raceSuffix": "レース",
+      "time": "タイム",
+      "going": "馬場",
+      "official": "確定",
+      "photo": "写真",
+      "live": "ルーレット実況",
+      "nose": "ハナ",
+      "head": "アタマ",
+      "neck": "クビ",
+      "distance": "大差",
+      "photoFinish": "写真判定"
     },
     "commentary": {
       "gate": "各馬ゲートに収まりました…",
@@ -176,6 +217,59 @@
       "close": "{{first}}と{{second}}、並んだ並んだ！",
       "finish": "{{name}}、いまゴールイン！",
       "photo": "ほとんど並んでゴール！ 写真判定… 勝ったのは{{name}}！"
+    },
+    "news": {
+      "skip": "ニュースをとばす",
+      "corner": "競馬",
+      "vtr": {
+        "front": "スタートから先頭に立った{{winner}}が、そのまま最後まで逃げ切りました。",
+        "stalker": "好位につけた{{winner}}が、直線で抜け出しました。",
+        "closer": "中団で脚をためた{{winner}}が、直線で鋭く差し切りました。",
+        "deep": "後方に控えた{{winner}}が、直線で大外から一気に追い込みました。"
+      },
+      "resultTitle": "レース結果",
+      "lengths": "{{margin}}馬身",
+      "telop": {
+        "headline": "{{race}}　{{winner}}が優勝",
+        "vtr": "{{race}}（{{course}}）",
+        "time": "勝ちタイム {{time}}（{{course}}）"
+      },
+      "headline": {
+        "photo": "{{race}}は写真判定にもつれる大接戦。制したのは{{winner}}でした。",
+        "rout": "{{race}}は{{winner}}が後続に{{margin}}をつける圧勝です。",
+        "upset": "{{race}}は{{popularity}}番人気の{{winner}}が勝ち、波乱の結果となりました。",
+        "favorite": "{{race}}は1番人気の{{winner}}が期待に応えて優勝しました。",
+        "standard": "{{race}}は{{winner}}が優勝しました。"
+      },
+      "result": {
+        "placings": "2着は{{second}}、3着は{{third}}。勝ちタイムは{{time}}でした。",
+        "second": "2着は{{second}}。勝ちタイムは{{time}}でした。"
+      },
+      "comment": {
+        "photo": "最後まで目の離せない、見ごたえのあるレースでしたね。",
+        "rout": "強い勝ち方でした。次のレースも楽しみです。",
+        "upset": "これは驚きの結果となりました。",
+        "favorite": "さすがの走りでしたね。",
+        "standard": "見事なレースでした。"
+      },
+      "closing": "以上、競馬のニュースでした。",
+      "bigMargin": "大差",
+      "cue": {
+        "next": "このあとVTR",
+        "hurry": "巻きで！",
+        "left": "あと{{seconds}}秒",
+        "ten": "10秒前",
+        "five": "5秒前",
+        "break": "CMいきます"
+      },
+      "vtrMark": "VTR",
+      "endCard": "次のレースもお楽しみに"
+    },
+    "paddock": {
+      "title": "パドック",
+      "entering": "入場",
+      "call": "止まーれー！",
+      "weight": "{{weight}}kg（{{change}}）"
     }
   }
 }

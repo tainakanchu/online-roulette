@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { activityScore, distanceCategory } from "@tainakanchu/roulette-core";
 import type { GitHubStatus, RaceEntry } from "../../hooks/useRaceCard";
 import { MAX_RACE_NAME_LENGTH, RACE_GRADES, type RaceGrade } from "../../utils/horseRaceStorage";
+import type { TrackGoing, TrackSurface } from "../../utils/raceCourse";
+import { stretchWind, type RaceWind } from "../../utils/raceWind";
 import { frameNumber } from "../../utils/raceFrame";
 
 // JRA の枠色（1 白 2 黒 3 赤 4 青 5 黄 6 緑 7 橙 8 桃）
@@ -31,6 +33,10 @@ interface RaceCardProps {
   entries: RaceEntry[];
   /** 距離（m） */
   distance: number;
+  surface: TrackSurface;
+  going: TrackGoing;
+  /** 会場の風（見出しに風速と、直線で追い風か向かい風かを出す） */
+  wind: RaceWind;
   /** ユーザー入力のレース名（未入力なら空文字） */
   raceName: string;
   onRaceNameChange: (name: string) => void;
@@ -51,6 +57,9 @@ interface RaceCardProps {
 export const RaceCard: FC<RaceCardProps> = memo(function RaceCard({
   entries,
   distance,
+  surface,
+  going,
+  wind,
   raceName,
   onRaceNameChange,
   raceGrade,
@@ -122,7 +131,17 @@ export const RaceCard: FC<RaceCardProps> = memo(function RaceCard({
             </span>
           </span>
           <span>
-            {t("race.card.course", { meters: distance, category })} · {t("race.card.field", { count: fieldSize })}
+            {t("race.card.course", {
+              surface: t(`race.course.surfaces.${surface}`),
+              meters: distance,
+              category,
+              going: t(`race.course.goings.${surface}.${going}`),
+            })}{" "}
+            · {t("race.card.field", { count: fieldSize })} ·{" "}
+            {t("race.card.wind", {
+              speed: wind.speedMps.toFixed(1),
+              stretch: t(`race.card.windStretch.${stretchWind(wind)}`),
+            })}
           </span>
         </div>
       </header>
