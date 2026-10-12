@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import type { HorseModel } from "./horseModel";
+import { TAIL_DOCK_LENGTH, type HorseModel } from "./horseModel";
 import { createSimulatedTailMaterial } from "./horseTail";
-import type { KinematicCollider, SoftBody, SoftBodyWorld } from "./softBodyPhysics";
+import { MAX_PHYSICS_STEP, type KinematicCollider, type SoftBody, type SoftBodyWorld } from "./softBodyPhysics";
 import type { CourseWind } from "./wind";
 
 // 馬の尻尾を物理エンジン（softBodyPhysics.ts の Jolt Physics）で動かす。
@@ -21,8 +21,8 @@ const HAIR_LENGTH = 1.05;
 const SEGMENT = HAIR_LENGTH / (POINTS - 1);
 /** 描く細い毛の本数 */
 const RENDER_STRANDS = 40;
-/** 尻尾の芯の長さ（毛はこの範囲から生える） */
-const DOCK_LENGTH = 0.38;
+/** 尻尾の芯の長さ（毛はこの範囲から生える。芯は馬のモデルが描く） */
+const DOCK_LENGTH = TAIL_DOCK_LENGTH;
 /** 空気抵抗（1/秒）。走る速さでの流れと重力の釣り合いで、毛が斜め後ろへなびく角度が決まる */
 const DRAG = 1.8;
 
@@ -283,7 +283,11 @@ export class TailPhysics {
         continue;
       }
       courseWind.sample(this.root, time, wind);
-      // 付け根の 2 点は、このステップの間にそこへ着く速さを与える（物理エンジンは質量 0 の点を速さで動かす）
+      // 付け根の 2 点は、このステップの終わりにちょうど体の上に着くよう、速さを与えて動かす（物理エンジンは質量 0 の点を速さで動かす）。
+      // 物理エンジンが 1 回に進める時間（MAX_PHYSICS_STEP）より 1 コマが長いときは、進めきれない分だけ先に位置を寄せておく。
+      // Why not: 速さだけで動かすと、描画が重いときに付け根が体に追いつかず、走る速さの分だけ尻尾が体から離れて置いていかれる。
+      // 位置だけで動かす（速さ 0）と、毎コマ付け根が飛ぶので毛先が暴れる
+      const stepDt = Math.min(dt, MAX_PHYSICS_STEP);
       for (let s = 0; s < GUIDES; s += 1) {
         this.guideAnchors(s, first, second);
         for (const [k, anchor] of [
@@ -292,7 +296,11 @@ export class TailPhysics {
         ] as const) {
           const i = vertexIndex(s, k);
           tail.body.getPosition(i, position);
-          tail.body.setVelocity(i, (anchor.x - position.x) / dt, (anchor.y - position.y) / dt, (anchor.z - position.z) / dt);
+          const vx = (anchor.x - position.x) / dt;
+          const vy = (anchor.y - position.y) / dt;
+          const vz = (anchor.z - position.z) / dt;
+          tail.body.setPosition(i, anchor.x - vx * stepDt, anchor.y - vy * stepDt, anchor.z - vz * stepDt);
+          tail.body.setVelocity(i, vx, vy, vz);
         }
       }
       // 空気: 風との相対速度に比例する抵抗と、走る速さに応じた乱れ（毛先ほど大きく揺れる）

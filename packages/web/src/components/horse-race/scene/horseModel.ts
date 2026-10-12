@@ -54,6 +54,9 @@ const ellipsoid = (rx: number, ry: number, rz: number) => {
  */
 export const HORSE_NOSE_REACH = 0.78 + 0.98 * Math.cos(0.78) + 0.72 * Math.cos(0.78 - 1.55);
 
+/** 尻尾の芯（尾の付け根の、毛が生えている部分）の長さ。物理エンジンで動かす毛は、この範囲から生える */
+export const TAIL_DOCK_LENGTH = 0.38;
+
 /** これより遅いと並足で歩く（ワールド単位/秒） */
 const WALK_MAX_SPEED = 4;
 /** 並足の 1 完歩の長さ（約 1.7m） */
@@ -70,6 +73,8 @@ export class HorseModel {
   private readonly tail = new THREE.Group();
   /** 頂点シェーダーで揺らす尻尾（物理エンジンで動かすときは隠す） */
   private tailMesh: THREE.Mesh | null = null;
+  /** 物理エンジンで動かすときの尻尾の芯（毛はこの芯から生える。頂点シェーダーの尻尾は芯ごと揺らすので、そのときは隠す） */
+  private tailDock: THREE.Mesh | null = null;
   /** 尻尾の毛の色（鬣と同じ） */
   readonly tailColor = new THREE.Color();
   private readonly jockey = new THREE.Group();
@@ -191,6 +196,15 @@ export class HorseModel {
     this.tail.add(tailMesh);
     this.tailMesh = tailMesh;
     this.tailColor.set(coat.mane);
+    // 芯は尻の中から -X へ伸びる先細りの円柱。尻の中へ少し埋めて、走って尻尾が後ろへ流れても尻との間に隙間を作らない
+    const dockInside = 0.08;
+    const dockGeometry = new THREE.CylinderGeometry(0.04, 0.075, TAIL_DOCK_LENGTH + dockInside, 8);
+    dockGeometry.rotateZ(Math.PI / 2);
+    dockGeometry.translate((dockInside - TAIL_DOCK_LENGTH) / 2, 0, 0);
+    const tailDock = mesh(dockGeometry, this.track(new THREE.MeshStandardMaterial({ color: coat.mane, roughness: 0.85 })));
+    tailDock.visible = false;
+    this.tail.add(tailDock);
+    this.tailDock = tailDock;
 
     // ----- 脚 -----
     const socks = (spec.seed >> 4) % 4; // 0..3 本の白ソックス
@@ -403,6 +417,7 @@ export class HorseModel {
   /** 物理エンジンで動かす尻尾に切り替えたら、頂点シェーダーで揺らす尻尾を隠す */
   setTailSimulated(simulated: boolean) {
     if (this.tailMesh) this.tailMesh.visible = !simulated;
+    if (this.tailDock) this.tailDock.visible = simulated;
   }
 
   /**

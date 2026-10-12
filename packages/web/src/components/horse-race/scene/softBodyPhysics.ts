@@ -57,6 +57,9 @@ export interface SoftBodyOptions {
  * ソフトボディ 1 つ。頂点の位置と速度は WebAssembly のメモリを直接読み書きする。
  * ボディは原点に置いたまま動かさない（mUpdatePosition = false）ので、頂点の座標はそのままワールド座標
  */
+/** 物理エンジンを 1 回に進める時間の上限（描画が重くて 1 コマが長いときも、これより長くは進めない） */
+export const MAX_PHYSICS_STEP = 1 / 30;
+
 export class SoftBody {
   readonly count: number;
   private readonly base: number;
@@ -314,7 +317,7 @@ export class SoftBodyWorld {
    */
   step(dt: number) {
     if (dt <= 0) return;
-    this.jolt.Step(Math.min(dt, 1 / 30), 2);
+    this.jolt.Step(Math.min(dt, MAX_PHYSICS_STEP), 2);
   }
 
   dispose() {
