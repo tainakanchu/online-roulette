@@ -644,13 +644,18 @@ export class Paddock {
         // 掲示板の枠・柱・鉄骨。ボルトのまわりや下端に錆がにじむ
         material = addDetail(standard({ roughness: 0.5, metalness: 0.4 }), {
           texture: this.texture("steel", createSteelFrameDetail),
-          period: 0.8,
+          period: 1.1,
           space: "world",
           // G は錆の量（0.5 で塗装の上ににじむ薄い錆、1 で塗装が剥げて浮いた錆）。
           // 垂れ筋（0.3〜0.6）は塗装に茶色い錆がにじむ程度、塊の芯（0.7〜1）は剥げて浮いた錆の色にする。
-          // 錆色は茶色寄りにする（鮮やかなオレンジで塗りつぶすと、暗い塗装の上で斑点が浮いて見える）
-          color: `float steelStain = smoothstep(0.08, 0.5, detail.g) * 0.45;
-            float steelRust = smoothstep(0.5, 0.9, detail.g) * 0.9;
+          // 錆色は茶色寄りにする（鮮やかなオレンジで塗りつぶすと、暗い塗装の上で斑点が浮いて見える）。
+          // テクスチャは周期ごとに同じ形を繰り返すので、長い梁に同じ錆の形が等間隔で並んで見えないよう、
+          // 鉛直軸のまわりに半端な角度（約 37.7°）回した座標で読み直す（梁に沿って進むとテクスチャの中を斜めに進み、同じ形に戻らない。
+          // 鉛直は回さないので垂れ筋は下向きのまま）。さらに周期の合わない（0.29 倍の）大きな区域で錆の出る所を間引く
+          color: `detail = texture(uDetail, vec3(dot(vDetailPos.xz, vec2(0.7907, 0.6122)), vDetailPos.y, dot(vDetailPos.xz, vec2(-0.6122, 0.7907))));
+            float steelZone = smoothstep(0.42, 0.6, texture(uDetail, vDetailPos * 0.29 + vec3(0.41, 0.17, 0.73)).r);
+            float steelStain = smoothstep(0.08, 0.5, detail.g) * mix(0.15, 0.45, steelZone);
+            float steelRust = smoothstep(0.5, 0.9, detail.g) * 0.9 * steelZone;
             vec3 steelRustColor = mix(vec3(0.4, 0.22, 0.11), vec3(0.24, 0.13, 0.07), detail.a);
             diffuseColor.rgb *= 0.88 + 0.24 * detail.r;
             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.3, 0.19, 0.12), steelStain);
