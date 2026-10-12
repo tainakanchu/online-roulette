@@ -212,8 +212,10 @@ export class NewsScreens {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
       ctx.lineWidth = 4;
       ctx.strokeRect(390, mid - 44, 88, 88);
-      // 札の色が明るいと白い数字が読めないので、明るい札は黒い数字にする
-      const isLightBadge = new THREE.Color(row.color).getHSL({ h: 0, s: 0, l: 0 }).l > 0.6;
+      // 札の色が明るいと白い数字が読めないので、明るい札は黒い数字にする。
+      // 明るさは目に感じる明るさ（輝度）で比べる（HSL の明度だと黄色が暗い色と同じに扱われる）
+      const badge = new THREE.Color(row.color);
+      const isLightBadge = 0.2126 * badge.r + 0.7152 * badge.g + 0.0722 * badge.b > 0.35;
       ctx.fillStyle = isLightBadge ? "#111111" : "#ffffff";
       ctx.textAlign = "center";
       ctx.font = `bold 56px ${FONT}`;

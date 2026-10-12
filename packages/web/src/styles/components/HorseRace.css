@@ -1414,11 +1414,11 @@
     newsFadeOut 0.4s ease-in 2.1s forwards;
 }
 
-/* エンドカード（番組ロゴと「次のレースもお楽しみに」） */
+/* エンドカード（番組ロゴと「次のレースもお楽しみに」）。お辞儀を隠さないよう、お辞儀の後に画面の下寄りへ出す */
 .news-endcard {
   position: absolute;
   left: 50%;
-  top: 50%;
+  top: 74%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1430,7 +1430,7 @@
   box-shadow: 0 1cqh 4cqw rgba(0, 0, 0, 0.5);
   transform: translate(-50%, -50%);
   opacity: 0;
-  animation: newsEndcard 0.6s ease-out 2.3s forwards;
+  animation: newsEndcard 0.6s ease-out 2.8s forwards;
 }
 
 .news-endcard-logo {
