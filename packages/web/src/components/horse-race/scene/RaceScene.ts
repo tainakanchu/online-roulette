@@ -30,6 +30,9 @@ import { CLEAR_SKY, OVERCAST_SKY, overcastAmount } from "./surfaceCommon";
 import { loadGateModel, releaseGateDetail, StartingGate, type GateModel } from "./startingGate";
 import { createSignTexture, createSoftDotTexture } from "./textures";
 import type { VisionInfo } from "./turfVision";
+import type { NewsSegment } from "../../../utils/raceNews";
+import type { NewsStudio } from "./newsStudio";
+import type { NewsWallInfo } from "./newsScreens";
 import {
   formatRaceClock,
   formatRaceTime,
@@ -56,6 +59,29 @@ export interface RaceCallbacks {
   onWinnerCross?: () => void;
   onComplete?: () => void;
 }
+
+export interface NewsCallbacks {
+  /** カット（segments の index）が切り替わった */
+  onSegment?: (index: number) => void;
+  /** ニュースが終わった（読み込めなかったときもすぐ呼ぶ） */
+  onEnd?: () => void;
+}
+
+/** レース後のニュースに使う、確定した結果 */
+export interface RaceSummary {
+  /** 着順（馬 index） */
+  order: number[];
+  /** 1・2 着の着差（馬身） */
+  marginLengths: number;
+  /** 着差の表示（order[i] と order[i + 1] の間） */
+  margins: string[];
+  /** 写真判定になったか */
+  photo: boolean;
+  /** 勝ち時計の表示 */
+  finalTime: string;
+}
+
+export type { NewsWallInfo } from "./newsScreens";
 
 type Shot =
   | "idle"
@@ -133,6 +159,10 @@ const BOARD_CENTER = new THREE.Vector3(FINISH_X - 50, 12, TRACK_HALF_WIDTH + 26)
 /** スローモーションにする1・2着の見た目の差（単位。約13m） */
 const CLOSE_FINISH_GAP = 0.3;
 const OVERRUN = 32;
+/** ニュースの VTR: ゴールの前後をスローで見せる再生速度と、スローにする範囲（実時間の秒。ゴールの前と後） */
+const REPLAY_SLOW_SCALE = 0.3;
+const REPLAY_SLOW_BEFORE = 0.9;
+const REPLAY_SLOW_AFTER = 0.7;
 
 /** ゴール後は徐々に減速して止まるように見せる */
 const compressAfterFinish = (x: number) =>
@@ -451,6 +481,12 @@ export class RaceScene {
   private leaderFraction = 0;
   // 中継映像のカメラ
   private videoShot = "";
+  /** レース後のニュース（スタジオは最初に要ったときに読み込む） */
+  private studio: NewsStudio | null = null;
+  private studioLoading: Promise<NewsStudio | null> | null = null;
+  private news: { segments: NewsSegment[]; index: number; time: number; callbacks: NewsCallbacks } | null = null;
+  /** ニュースの VTR（ゴール前のリプレイ）。savedT はリプレイ前のレース内部時刻（終わったら戻す） */
+  private replay: { slowFrom: number; savedT: number; time: number } | null = null;
   private readonly videoLook = new THREE.Vector3();
   private readonly videoPos = new THREE.Vector3();
   private readonly videoDesiredPos = new THREE.Vector3();
@@ -655,9 +691,10 @@ export class RaceScene {
     this.environment.vision.setInfo(info);
   }
 
-  /** カウントダウン用のカメラへ */
+  /** カウントダウン用のカメラへ。全馬の枠入りが終わったので、ゲートの前面の枠入り確認ランプを点ける */
   showGate() {
     this.setShot("gate");
+    this.gate?.setLamp(true);
   }
 
   openGate() {
@@ -718,6 +755,77 @@ export class RaceScene {
     this.frameListener = listener;
   }
 
+  /** 確定した結果（ニュースの原稿と結果の表に使う）。確定前は null */
+  getRaceSummary(): RaceSummary | null {
+    const race = this.race;
+    const [first, second] = this.finishOrder;
+    if (!race || !this.completed || first === undefined) return null;
+    const unitsPerTime = (FINISH_X - this.startX) / Math.max(0.1, winnerTime(race));
+    const lengthsBetween = (ahead: number, behind: number) =>
+      ((this.crossTimes[behind] - this.crossTimes[ahead]) * unitsPerTime) / HORSE_LENGTH_UNITS;
+    const labels = this.visionInfo?.labels;
+    const marginLengths = second === undefined ? 0 : lengthsBetween(first, second);
+    return {
+      order: [...this.finishOrder],
+      marginLengths,
+      margins: this.finishOrder
+        .slice(1)
+        .map((horse, k) => (labels ? marginLabel(lengthsBetween(this.finishOrder[k], horse), labels) : "")),
+      photo: this.photoShownAt < Infinity || marginLengths < PHOTO_MARGIN_LENGTHS,
+      finalTime: formatRaceTime(this.winnerSeconds),
+    };
+  }
+
+  /** ニュースのスタジオを先に読み込んでおく（レースが始まったら呼ぶ。2 回目以降は同じものを返す） */
+  prepareNews(): Promise<NewsStudio | null> {
+    if (!this.studioLoading) {
+      this.studioLoading = import("./newsStudio")
+        .then(async ({ NewsStudio, loadNewsModels }) => {
+          const models = await loadNewsModels();
+          if (this.disposed) return null;
+          const studio = new NewsStudio(this.renderer, models);
+          studio.setSize(Math.max(1, this.container.clientWidth), Math.max(1, this.container.clientHeight));
+          this.studio = studio;
+          return studio;
+        })
+        .catch((error) => {
+          console.warn("Failed to load news studio", error);
+          // 次のレースでもう一度読み込めるようにする
+          this.studioLoading = null;
+          return null;
+        });
+    }
+    return this.studioLoading;
+  }
+
+  /**
+   * レース後のニュースを始める。スタジオに切り替え、segments の順にカットを進め、VTR のカットではゴール前をリプレイする
+   */
+  startNews(segments: NewsSegment[], info: NewsWallInfo, callbacks: NewsCallbacks) {
+    this.stopNews();
+    const news = { segments, index: -1, time: 0, callbacks };
+    this.news = news;
+    void this.prepareNews().then((studio) => {
+      // 読み込んでいる間に止められた / 別のニュースが始まった
+      if (this.news !== news) return;
+      if (!studio || segments.length === 0) {
+        this.news = null;
+        callbacks.onEnd?.();
+        return;
+      }
+      studio.setInfo(info);
+      this.enterNewsSegment(0);
+    });
+  }
+
+  /** ニュースを途中でやめて競馬場に戻る（onEnd は呼ばない） */
+  stopNews() {
+    if (!this.news) return;
+    this.news = null;
+    this.stopReplay();
+    if (this.race) this.setShot("winner", true, true);
+  }
+
   /** preserveDrawingBuffer なしでも読めるよう、描画直後に 2D キャンバスへ写す */
   private snapshot(): HTMLCanvasElement {
     const source = this.renderer.domElement;
@@ -750,6 +858,7 @@ export class RaceScene {
     this.clothFlags?.dispose();
     this.softWorld?.dispose();
     this.photoFinish.dispose();
+    this.studio?.dispose();
     this.composer.dispose();
     releaseNoise3D();
     this.renderer.dispose();
@@ -785,6 +894,8 @@ export class RaceScene {
   }
 
   private stopRace() {
+    this.news = null;
+    this.replay = null;
     this.resetFinishState();
     this.running = false;
     this.race = null;
@@ -914,6 +1025,7 @@ export class RaceScene {
     const height = Math.max(1, this.container.clientHeight);
     this.renderer.setSize(width, height, false);
     this.composer.setSize(width, height);
+    this.studio?.setSize(width, height);
     // ブルームは半分の解像度で十分
     this.bloom.resolution.set(width / 2, height / 2);
     this.camera.aspect = width / height;
@@ -957,13 +1069,23 @@ export class RaceScene {
     this.rafId = requestAnimationFrame(this.loop);
     const dt = Math.min(0.05, this.clock.getDelta());
     this.time += dt;
+    this.updateNews(dt);
     this.update(dt);
+    // ニュースのスタジオを映している間は、競馬場は動かすだけで描かない（VTR のカットでは競馬場を映す）
+    const studio = this.studio;
+    const inStudio = studio && this.news && this.news.index >= 0 && !this.replay;
+    if (inStudio) {
+      studio.update(dt);
+      studio.render();
+      return;
+    }
     // 毛並みの模様を馬の体に貼りつけるため、今フレームの行列を確定させてから馬ごとの逆行列を渡す
     this.scene.updateMatrixWorld();
     for (const horse of this.horses) horse.syncCoatSpace();
     // 決勝写真はゴール線の 1 列を撮るだけなので、レース中は毎フレーム撮っておく（撮る範囲の時刻の外では何もしない）
     // ゴール線の上のゴール板や、内馬場側の写真判定の塔などの備品は写さない（背景は内馬場の芝と生垣の縞になる）
-    if (this.running) {
+    // VTR のリプレイ中は撮らない（撮り終えた写真を上書きしない）
+    if (this.running && !this.replay) {
       const hidden = [this.courseMarks, this.courseExtras?.group].filter((object) => object !== undefined);
       this.photoFinish.capture(this.renderer, this.scene, this.raceT, hidden);
     }
@@ -985,13 +1107,145 @@ export class RaceScene {
     return progresses.map((_, i) => i).sort((a, b) => progresses[b] - progresses[a]);
   }
 
+  /**
+   * 馬を動かす。progresses はレース内部の位置（単位）。走路の上の位置・向き・脚の運び・土煙を決める
+   * @param dt 馬の動きの時間（スローモーション中は短い）
+   * @param realDt 実時間（速さの平滑化に使う）
+   */
+  private moveHorses(progresses: number[], order: number[], leaderFraction: number, dt: number, realDt: number) {
+    const target = this.race?.target ?? 1;
+    const courseLength = FINISH_X - this.startX;
+    const innermost = this.lanes[0] ?? 0;
+    this.horses.forEach((horse, i) => {
+      const fraction = progresses[i] / target;
+      const raw = this.startX + fraction * courseLength;
+      const x = compressAfterFinish(raw);
+      const speed = dt > 0 ? (x - this.prevWorldX[i]) / dt : 0;
+      // フレーム時間の揺らぎだけ吸収する軽い平滑化
+      this.speeds[i] += (speed - this.speeds[i]) * (1 - Math.exp(-realDt * 12));
+      this.prevWorldX[i] = x;
+
+      // スタート後は少しずつ内ラチ側へ寄っていく（1 番人気でもラチ沿いを走る）
+      const squeeze = LANE_SQUEEZE * smoothstep(0.02, 0.3, fraction);
+      const sway = Math.sin(this.time * 0.7 + i * 1.7) * 0.06 * smoothstep(0.02, 0.1, fraction);
+      const z = innermost - (innermost - this.lanes[i]) * (1 - squeeze) + sway;
+      const dz = z - horse.root.position.z;
+      horse.root.position.set(x, 0, z);
+      // 横移動の向きに少しだけ首を振る
+      const yaw = dt > 0 && this.speeds[i] > 1 ? -Math.atan2(dz / dt, this.speeds[i]) : 0;
+      horse.root.rotation.y += (Math.max(-0.12, Math.min(0.12, yaw)) - horse.root.rotation.y) * 0.1;
+
+      const rank = order.indexOf(i);
+      const effort = leaderFraction > 0.7 ? Math.max(0, 1 - rank / 4) : 0.2;
+      horse.update(dt, this.speeds[i], effort);
+      if (this.speeds[i] > 4 && Math.random() < dt * this.dust.rate) {
+        this.dust.emit(x - 0.7, z, this.speeds[i]);
+      }
+    });
+  }
+
+  /** レース内部時刻 t の位置へ馬を飛ばす（リプレイの始まりと終わり）。速さも t の時点の速さにそろえる */
+  private jumpHorsesTo(race: RaceSimulation, t: number) {
+    const target = race.target;
+    const courseLength = FINISH_X - this.startX;
+    const step = 1 / 60;
+    const worldX = (time: number, i: number) =>
+      compressAfterFinish(this.startX + (runningPositionAt(race, i, time) / target) * courseLength);
+    this.raceT = t;
+    this.horses.forEach((_, i) => {
+      const before = worldX(t - step * this.raceRate, i);
+      this.prevWorldX[i] = before;
+      this.speeds[i] = (worldX(t, i) - before) / step;
+    });
+    const progresses = this.horses.map((_, i) => this.horseProgress(i));
+    const order = this.currentOrder(progresses);
+    this.moveHorses(progresses, order, Math.min(1, (progresses[order[0]] ?? 0) / target), step, step);
+  }
+
+  // ----- レース後のニュース -----
+
+  /** ニュースのカットを時間で進める。最後のカットが終わったら競馬場に戻る */
+  private updateNews(dt: number) {
+    const news = this.news;
+    if (!news || news.index < 0) return;
+    news.time += dt;
+    const segment = news.segments[news.index];
+    if (news.time < segment.seconds) return;
+    const next = news.index + 1;
+    if (next >= news.segments.length) {
+      this.stopNews();
+      news.callbacks.onEnd?.();
+      return;
+    }
+    this.enterNewsSegment(next);
+  }
+
+  private enterNewsSegment(index: number) {
+    const news = this.news;
+    if (!news) return;
+    news.index = index;
+    news.time = 0;
+    const segment = news.segments[index];
+    // 番組の残り時間（AD のカンペに書く）
+    const remaining = news.segments.slice(index).reduce((sum, s) => sum + s.seconds, 0);
+    this.studio?.setSegment(segment, remaining);
+    if (segment.shot === "vtr") this.startReplay(segment.seconds);
+    else this.stopReplay();
+    news.callbacks.onSegment?.(index);
+  }
+
+  /**
+   * ゴール前のリプレイ（ニュースの VTR）。直線を正面の超望遠と真横のドリーで等速に見せ、ゴールの前後はゴール線の真横からスローで見せる。
+   * 全体が seconds 秒に収まるよう、等速で見せる長さを決める
+   */
+  private startReplay(seconds: number) {
+    const race = this.race;
+    if (!race) return;
+    const finish = winnerTime(race);
+    const slowSeconds = (REPLAY_SLOW_BEFORE + REPLAY_SLOW_AFTER) / REPLAY_SLOW_SCALE;
+    // 最後に 0.3 秒ほど余らせて、ゴールを過ぎた所で切り替わるようにする
+    const normalSeconds = Math.max(1.5, seconds - slowSeconds - 0.3);
+    const slowFrom = finish - REPLAY_SLOW_BEFORE * this.raceRate;
+    const from = slowFrom - normalSeconds * this.raceRate;
+    this.replay = { slowFrom, savedT: this.raceT, time: 0 };
+    this.jumpHorsesTo(race, Math.max(0, from));
+    this.timeScale = 1;
+    this.setShot("headon", true, true);
+  }
+
+  private updateReplay(race: RaceSimulation, realDt: number) {
+    const replay = this.replay;
+    if (!replay) return realDt;
+    replay.time += realDt;
+    const slow = this.raceT >= replay.slowFrom;
+    // 等速の前半は正面から、後半は真横で並走、ゴールの前後はゴール線の真横からスローで
+    if (slow) this.setShot("finish");
+    else if (replay.time > 2.4) this.setShot("stretch");
+    const dt = realDt * (slow ? REPLAY_SLOW_SCALE : 1);
+    const progresses = this.horses.map((_, i) => this.horseProgress(i));
+    const order = this.currentOrder(progresses);
+    const leaderFraction = Math.min(1, (progresses[order[0]] ?? 0) / race.target);
+    this.raceT += dt * this.raceRate;
+    this.moveHorses(progresses, order, leaderFraction, dt, realDt);
+    return dt;
+  }
+
+  /** リプレイをやめて、リプレイ前の位置（ゴール後に流している所）へ戻す */
+  private stopReplay() {
+    const replay = this.replay;
+    if (!replay) return;
+    this.replay = null;
+    if (this.race) this.jumpHorsesTo(this.race, replay.savedT);
+  }
+
   private update(realDt: number) {
     const race = this.race;
     let dt = realDt;
 
-    if (race && this.running) {
+    if (race && this.replay) {
+      dt = this.updateReplay(race, realDt);
+    } else if (race && this.running) {
       const target = race.target;
-      const courseLength = FINISH_X - this.startX;
       // 位置順と接戦判定
       const progresses = this.horses.map((_, i) => this.horseProgress(i));
       const order = this.currentOrder(progresses);
@@ -1007,35 +1261,7 @@ export class RaceScene {
       this.excitement = Math.min(1, Math.max(this.excitement * 0.98, leaderFraction * leaderFraction));
 
       this.raceT += dt * this.raceRate;
-      const innermost = this.lanes[0] ?? 0;
-
-      // 馬を動かす
-      this.horses.forEach((horse, i) => {
-        const fraction = progresses[i] / target;
-        const raw = this.startX + fraction * courseLength;
-        const x = compressAfterFinish(raw);
-        const speed = dt > 0 ? (x - this.prevWorldX[i]) / dt : 0;
-        // フレーム時間の揺らぎだけ吸収する軽い平滑化
-        this.speeds[i] += (speed - this.speeds[i]) * (1 - Math.exp(-realDt * 12));
-        this.prevWorldX[i] = x;
-
-        // スタート後は少しずつ内ラチ側へ寄っていく（1 番人気でもラチ沿いを走る）
-        const squeeze = LANE_SQUEEZE * smoothstep(0.02, 0.3, fraction);
-        const sway = Math.sin(this.time * 0.7 + i * 1.7) * 0.06 * smoothstep(0.02, 0.1, fraction);
-        const z = innermost - (innermost - this.lanes[i]) * (1 - squeeze) + sway;
-        const dz = z - horse.root.position.z;
-        horse.root.position.set(x, 0, z);
-        // 横移動の向きに少しだけ首を振る
-        const yaw = dt > 0 && this.speeds[i] > 1 ? -Math.atan2(dz / dt, this.speeds[i]) : 0;
-        horse.root.rotation.y += (Math.max(-0.12, Math.min(0.12, yaw)) - horse.root.rotation.y) * 0.1;
-
-        const rank = order.indexOf(i);
-        const effort = leaderFraction > 0.7 ? Math.max(0, 1 - rank / 4) : 0.2;
-        horse.update(dt, this.speeds[i], effort);
-        if (this.speeds[i] > 4 && Math.random() < dt * this.dust.rate) {
-          this.dust.emit(x - 0.7, z, this.speeds[i]);
-        }
-      });
+      this.moveHorses(progresses, order, leaderFraction, dt, realDt);
 
       this.leaderFraction = leaderFraction;
       this.recordCrossings(progresses, target);

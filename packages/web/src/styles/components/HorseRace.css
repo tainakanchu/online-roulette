@@ -1193,3 +1193,318 @@
     transform: none;
   }
 }
+
+/* ----- レース後のニュース（日本の夜のニュースの体裁） ----- */
+/* ステージの大きさに合わせて文字を大きくするため、ステージを入れ物の大きさの基準にする（cqw / cqh） */
+.news-overlay {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  z-index: 3;
+  pointer-events: none;
+  font-family: "Hiragino Sans", "Noto Sans JP", "Noto Sans TC", system-ui, sans-serif;
+  color: #fff;
+}
+
+/* 左上の番組ロゴと時刻 */
+.news-bug {
+  position: absolute;
+  top: 4cqh;
+  left: 3cqw;
+  display: flex;
+  align-items: center;
+  gap: 1cqw;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.news-bug-logo {
+  padding: 0.5cqh 1cqw;
+  font-size: max(11px, 1.9cqw);
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, rgba(10, 30, 70, 0.85), rgba(4, 12, 32, 0.85));
+  border: 1px solid rgba(140, 200, 255, 0.55);
+  border-radius: 4px;
+}
+
+.news-bug-logo b,
+.news-title b {
+  color: #5fd0ff;
+}
+
+.news-bug-clock {
+  font-size: max(12px, 2.4cqw);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 番組の頭のタイトル。画面の下寄り（スタジオとキャスターを隠さない所）に、紺の札が左右に開いて出て、少しして消える */
+.news-title {
+  position: absolute;
+  left: 50%;
+  top: 76%;
+  padding: 1cqh 3cqw 1.3cqh;
+  font-size: max(24px, 5cqw);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  background: linear-gradient(180deg, rgba(14, 34, 84, 0.96), rgba(4, 12, 34, 0.96));
+  border-bottom: 0.5cqh solid #5fd0ff;
+  box-shadow:
+    0 0 4cqw rgba(95, 208, 255, 0.35),
+    0 1cqh 3cqw rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  animation: newsTitle 2.6s ease-out forwards;
+}
+
+@keyframes newsTitle {
+  0% {
+    clip-path: inset(0 50% 0 50%);
+    opacity: 1;
+  }
+  15% {
+    clip-path: inset(0 0 0 0);
+  }
+  75% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 0;
+  }
+}
+
+/* 右上のコーナー名 */
+/* 右上の全画面ボタン（38px）の左に並べる */
+.news-corner {
+  position: absolute;
+  top: 4cqh;
+  right: calc(3cqw + 44px);
+  padding: 0.6cqh 1.6cqw;
+  font-size: max(12px, 2.2cqw);
+  font-weight: 800;
+  background: linear-gradient(180deg, #2f80ed, #1452b8);
+  border-radius: 3px;
+  box-shadow: 0 0.4cqh 1.2cqw rgba(0, 0, 0, 0.35);
+  animation: newsWipe 0.45s ease-out;
+}
+
+.news-vtr-mark {
+  position: absolute;
+  top: 4cqh;
+  left: calc(3cqw + max(130px, 18cqw));
+  padding: 0.3cqh 1cqw;
+  font-size: max(10px, 1.6cqw);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* メインキャスターの寄りで右上に出す、肩のパネル */
+.news-shoulder {
+  position: absolute;
+  top: 13cqh;
+  right: 5cqw;
+  width: 38cqw;
+  margin: 0;
+  background: #071530;
+  border: 2px solid rgba(160, 210, 255, 0.85);
+  box-shadow: 0 1cqh 3cqw rgba(0, 0, 0, 0.45);
+  animation: newsWipe 0.5s ease-out;
+}
+
+.news-shoulder img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.news-shoulder figcaption {
+  padding: 0.6cqh 1cqw;
+  font-size: max(11px, 1.9cqw);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 下の大きなテロップ（白い文字に紺の帯、左に青い差し色） */
+.news-telop {
+  position: absolute;
+  left: 4cqw;
+  right: 4cqw;
+  bottom: 14cqh;
+  display: flex;
+  animation: newsWipe 0.5s ease-out;
+}
+
+.news-telop-text {
+  max-width: 100%;
+  padding: 1.2cqh 2.2cqw 1.2cqh 2cqw;
+  font-size: max(15px, 3.6cqw);
+  font-weight: 900;
+  line-height: 1.25;
+  background: linear-gradient(180deg, rgba(18, 40, 96, 0.94), rgba(6, 16, 46, 0.94));
+  border-left: 0.9cqw solid #2f9bff;
+  box-shadow: 0 0.6cqh 2cqw rgba(0, 0, 0, 0.45);
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 字幕（読み上げている原稿） */
+.news-caption {
+  position: absolute;
+  left: 8cqw;
+  right: 8cqw;
+  bottom: 3cqh;
+  margin: 0;
+  text-align: center;
+  font-size: max(12px, 2.3cqw);
+  font-weight: 700;
+  line-height: 1.4;
+  /* 映像の明るい所でも読めるよう、黒い縁取り */
+  text-shadow:
+    0 0 4px #000,
+    0 0 2px #000,
+    1px 1px 0 #000,
+    -1px -1px 0 #000;
+  animation: newsFade 0.4s ease-out;
+}
+
+/* 左上の番組ロゴの下（肩のパネル・テロップ・字幕・全画面のボタンと重ならない所） */
+.news-skip {
+  position: absolute;
+  left: 3cqw;
+  top: calc(4cqh + max(30px, 5cqw));
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(10, 8, 25, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+@keyframes newsWipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes newsFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 番組の終わりの字幕は、お辞儀の後のエンドカードと入れ替わりに消す */
+.news-caption--closing {
+  animation:
+    newsFade 0.4s ease-out,
+    newsFadeOut 0.4s ease-in 2.1s forwards;
+}
+
+/* エンドカード（番組ロゴと「次のレースもお楽しみに」） */
+.news-endcard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2cqh;
+  padding: 2.4cqh 5cqw 2.8cqh;
+  background: linear-gradient(180deg, rgba(14, 34, 84, 0.94), rgba(4, 12, 34, 0.94));
+  border-top: 0.4cqh solid #5fd0ff;
+  border-bottom: 0.4cqh solid #5fd0ff;
+  box-shadow: 0 1cqh 4cqw rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  animation: newsEndcard 0.6s ease-out 2.3s forwards;
+}
+
+.news-endcard-logo {
+  font-size: max(26px, 6.5cqw);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 3cqw rgba(95, 208, 255, 0.55);
+}
+
+.news-endcard-logo b {
+  color: #5fd0ff;
+}
+
+.news-endcard-text {
+  font-size: max(13px, 2.4cqw);
+  font-weight: 700;
+  color: #cfe3ff;
+  white-space: nowrap;
+}
+
+@keyframes newsEndcard {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes newsFadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+/* 競馬場とスタジオの切り替えに挟む黒（HorseRaceMode の NEWS_FADE_MS と合わせる） */
+.news-blackout {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: #000;
+  pointer-events: none;
+}
+
+.news-blackout--in {
+  animation: newsBlackIn 0.65s ease-in forwards;
+}
+
+.news-blackout--out {
+  animation: newsBlackOut 0.65s ease-out forwards;
+}
+
+/* 締めのカットの最後の 0.9 秒で黒に落とす */
+.news-blackout--closing {
+  opacity: 0;
+  animation: newsBlackIn 0.9s ease-in calc(var(--news-seconds, 5s) - 0.9s) forwards;
+}
+
+@keyframes newsBlackIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes newsBlackOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

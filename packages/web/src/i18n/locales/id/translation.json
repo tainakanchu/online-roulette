@@ -216,6 +216,53 @@
       "close": "{{first}} dan {{second}} berdampingan!",
       "finish": "{{name}} menang!",
       "photo": "Finis sangat tipis! Foto finis… pemenangnya {{name}}!"
+    },
+    "news": {
+      "skip": "Lewati berita",
+      "corner": "PACUAN KUDA",
+      "vtr": {
+        "front": "{{winner}} langsung memimpin sejak start dan bertahan sampai garis finis.",
+        "stalker": "{{winner}} mengikuti di posisi depan lalu melesat di lintasan lurus.",
+        "closer": "{{winner}} menyimpan tenaga di tengah rombongan lalu menyalip di lintasan lurus.",
+        "deep": "{{winner}} menunggu di belakang lalu melaju kencang dari sisi luar."
+      },
+      "resultTitle": "HASIL BALAPAN",
+      "lengths": "{{margin}} panjang badan",
+      "telop": {
+        "headline": "{{race}}: {{winner}} menang",
+        "vtr": "{{race}} ({{course}})",
+        "time": "Waktu juara {{time}} ({{course}})"
+      },
+      "headline": {
+        "photo": "{{race}} berakhir dengan foto finis, dan {{winner}} dinyatakan menang.",
+        "rout": "{{winner}} menang telak di {{race}} dengan selisih {{margin}}.",
+        "upset": "Kejutan di {{race}}: {{winner}}, favorit ke-{{popularity}}, keluar sebagai juara.",
+        "favorite": "Favorit utama {{winner}} memenuhi harapan dan menjuarai {{race}}.",
+        "standard": "{{winner}} menjuarai {{race}}."
+      },
+      "result": {
+        "placings": "Posisi kedua {{second}}, ketiga {{third}}. Waktu juara {{time}}.",
+        "second": "Posisi kedua {{second}}. Waktu juara {{time}}."
+      },
+      "comment": {
+        "photo": "Balapan yang seru sampai detik terakhir.",
+        "rout": "Kemenangan yang meyakinkan. Kita tunggu balapan berikutnya.",
+        "upset": "Hasil yang sangat mengejutkan.",
+        "favorite": "Sesuai harapan semua orang.",
+        "standard": "Balapan yang luar biasa."
+      },
+      "closing": "Sekian berita pacuan kuda.",
+      "bigMargin": "jarak sangat jauh",
+      "cue": {
+        "next": "SETELAH INI VTR",
+        "hurry": "PERCEPAT!",
+        "left": "SISA {{seconds}} DETIK",
+        "ten": "10 DETIK",
+        "five": "5 DETIK",
+        "break": "MASUK IKLAN"
+      },
+      "vtrMark": "VTR",
+      "endCard": "Sampai jumpa di balapan berikutnya"
     }
   }
 }

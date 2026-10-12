@@ -216,6 +216,53 @@
       "close": "{{first}} and {{second}}, neck and neck!",
       "finish": "{{name}} wins it!",
       "photo": "A blanket finish! Photo… and it's {{name}}!"
+    },
+    "news": {
+      "skip": "Skip news",
+      "corner": "RACING",
+      "vtr": {
+        "front": "{{winner}} went straight to the lead and held on all the way to the line.",
+        "stalker": "{{winner}} sat just off the pace and pulled clear in the stretch.",
+        "closer": "{{winner}} saved ground in midpack and swept past in the stretch.",
+        "deep": "{{winner}} came from the back and flew home down the outside."
+      },
+      "resultTitle": "RESULTS",
+      "lengths": "{{margin}} lengths",
+      "telop": {
+        "headline": "{{race}}: {{winner}} wins",
+        "vtr": "{{race}} ({{course}})",
+        "time": "Winning time {{time}} ({{course}})"
+      },
+      "headline": {
+        "photo": "The {{race}} went to a photo finish, and {{winner}} got the verdict.",
+        "rout": "{{winner}} romped home in the {{race}}, winning by {{margin}}.",
+        "upset": "An upset in the {{race}}: {{winner}}, sent off as the no. {{popularity}} pick, took the win.",
+        "favorite": "Favorite {{winner}} lived up to the billing and won the {{race}}.",
+        "standard": "{{winner}} won the {{race}}."
+      },
+      "result": {
+        "placings": "{{second}} was second and {{third}} third. The winning time was {{time}}.",
+        "second": "{{second}} was second. The winning time was {{time}}."
+      },
+      "comment": {
+        "photo": "What a race. You couldn't take your eyes off it until the very end.",
+        "rout": "A dominant win. We can't wait to see what's next.",
+        "upset": "Quite a surprise result.",
+        "favorite": "Just as everyone expected.",
+        "standard": "A fine race."
+      },
+      "closing": "And that's the racing news.",
+      "bigMargin": "a distance",
+      "cue": {
+        "next": "VTR NEXT",
+        "hurry": "WRAP IT UP!",
+        "left": "{{seconds}} SEC LEFT",
+        "ten": "10 SEC",
+        "five": "5 SEC",
+        "break": "GOING TO BREAK"
+      },
+      "vtrMark": "VTR",
+      "endCard": "See you at the next race"
     }
   }
 }

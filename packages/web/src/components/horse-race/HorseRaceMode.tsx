@@ -9,12 +9,23 @@ import { DistancePicker } from "./DistancePicker";
 import { RaceCard } from "./RaceCard";
 import { Commentator, type CommentaryLine } from "./commentary";
 import { isRaceRecordingSupported, RaceRecorder, type RaceVideo } from "./raceRecorder";
-import type { RaceScene, RaceTick } from "./scene/RaceScene";
+import { NewsOverlay } from "./NewsOverlay";
+import { buildRaceNews, cueCardAt, type NewsSegment } from "../../utils/raceNews";
+import type { NewsWallInfo, RaceScene, RaceTick } from "./scene/RaceScene";
 
 const COUNTDOWN_INTERVAL_MS = 720;
 const GO_HOLD_MS = 650;
 /** 確定表示まで映すため、onComplete 後も少し録画を続ける */
 const RECORD_TAIL_MS = 2500;
+/**
+ * 確定からレース後のニュースに切り替えるまで。確定の後に電光掲示板を映す時間（3 秒）と、録画を止めるまで（RECORD_TAIL_MS）を待つ
+ * （ニュースのスタジオが録画に入らないように）
+ */
+const NEWS_DELAY_MS = 3600;
+/** 競馬場とスタジオの切り替えで黒を挟む時間（CSS の news-blackout と合わせる） */
+const NEWS_FADE_MS = 650;
+/** 着差がこれより大きいと「大差」と読む（馬身） */
+const BIG_MARGIN_LENGTHS = 10.5;
 /** 勝ち馬がゴールするまでの実時間（スローモーション分は別途伸びる）。長い距離ほど少し速く流す */
 const raceSeconds = (meters: number) => 15 * Math.pow(meters / 1600, 0.85);
 
@@ -62,6 +73,12 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
   const [outcome, setOutcome] = useState<RaceOutcome | null>(null);
   const [bet, setBet] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // レース後のニュース。index は今のカット
+  const [news, setNews] = useState<{ segments: NewsSegment[]; index: number; shoulder: string | null; title: string } | null>(
+    null
+  );
+  // 競馬場とスタジオの切り替えに挟む黒（in: 黒くなっていく / out: 黒から明けていく）
+  const [blackout, setBlackout] = useState<"none" | "in" | "out">("none");
 
   const locked = phase === "countdown" || phase === "racing";
   const canStart = entries.length >= 2 && !locked && sceneReady;
@@ -133,6 +150,8 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     setLiveOrder([]);
     setRemaining(null);
     setSlowMotion(false);
+    setNews(null);
+    setBlackout("none");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fieldKey, sceneVersion]);
 
@@ -190,6 +209,90 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     });
   }, [entries, outcome, raceNumber, raceName, raceGrade, surface, going, t, sceneVersion]);
 
+  // ----- レース後のニュース -----
+  const raceTitle = `${raceName || t("race.vision.title")}${raceGrade ? ` (${raceGrade})` : ""}`;
+  const beginNews = useCallback(
+    (scene: RaceScene, field: RaceEntry[]) => {
+      const summary = scene.getRaceSummary();
+      const winner = summary ? field[summary.order[0]] : undefined;
+      if (!summary || !winner) return;
+      const margin =
+        summary.marginLengths > BIG_MARGIN_LENGTHS
+          ? t("race.news.bigMargin")
+          : t("race.news.lengths", { margin: summary.margins[0] ?? "" });
+      const segments = buildRaceNews({
+        raceName: raceTitle,
+        courseLabel,
+        field: field.map((e) => ({ name: e.name, popularity: e.popularity, style: e.style })),
+        order: summary.order,
+        marginLengths: summary.marginLengths,
+        margin,
+        photo: summary.photo,
+        finalTime: summary.finalTime,
+      });
+      const photo = scene.getFinishPhoto();
+      const info: NewsWallInfo = {
+        photo,
+        race: raceTitle,
+        winner: winner.name,
+        course: courseLabel,
+        time: `${t("race.vision.time")} ${summary.finalTime}`,
+        resultTitle: t("race.news.resultTitle"),
+        corner: t("race.news.corner"),
+        rows: summary.order
+          .map((i, rank) => ({ e: field[i], rank }))
+          .filter(({ e }) => Boolean(e))
+          .map(({ e, rank }) => ({
+            rank: t("race.result.rank", { rank: rank + 1 }),
+            number: e.number,
+            color: e.color,
+            name: e.name,
+            margin: rank === 0 ? "" : (summary.margins[rank - 1] ?? ""),
+          })),
+        cueCard: (remaining) => {
+          const card = cueCardAt(remaining);
+          return { lines: card.lines.map((line) => t(line.key, line.params)), accent: card.accent };
+        },
+      };
+      // 肩のパネルに出すゴールの写真（JPEG にして軽くする）
+      let shoulder: string | null = null;
+      try {
+        shoulder = photo.toDataURL("image/jpeg", 0.85);
+      } catch {
+        shoulder = null;
+      }
+      // レースの実況はここで終わり（ニュースの後に競馬場へ戻ったとき、ゴールの実況が残らないように）
+      setCommentary(null);
+      // 競馬場を黒に落としてからスタジオへ切り替え、スタジオは黒から明ける
+      const fadeFromBlack = () => {
+        setBlackout("out");
+        later(() => setBlackout("none"), NEWS_FADE_MS);
+      };
+      setBlackout("in");
+      later(() => {
+        scene.startNews(segments, info, {
+          onSegment: (index) => {
+            setNews({ segments, index, shoulder, title: raceTitle });
+            if (index === 0) fadeFromBlack();
+          },
+          // 締めのカットの最後は黒に溶暗しているので、競馬場は黒から明ける
+          onEnd: () => {
+            setNews(null);
+            fadeFromBlack();
+          },
+        });
+      }, NEWS_FADE_MS);
+    },
+    [courseLabel, later, raceTitle, t]
+  );
+
+  const skipNews = useCallback(() => {
+    sceneRef.current?.stopNews();
+    setNews(null);
+    setBlackout("out");
+    later(() => setBlackout("none"), NEWS_FADE_MS);
+  }, [later]);
+
   // ----- レース進行 -----
   const start = useCallback(() => {
     const scene = sceneRef.current;
@@ -207,6 +310,11 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     const commentator = new Commentator(names);
 
     discardRecording();
+    // 前のレースのニュースを止め、次のニュースのスタジオを今のうちに読み込んでおく
+    scene.stopNews();
+    setNews(null);
+    setBlackout("none");
+    void scene.prepareNews();
     const recorder = canRecord ? new RaceRecorder() : null;
     if (recorder) {
       recorderRef.current = recorder;
@@ -259,6 +367,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
               order: race.order.map((i) => names[i]),
             });
             onFinish?.(names[race.winner] ?? "");
+            later(() => beginNews(scene, field), NEWS_DELAY_MS);
             if (recorder) {
               later(() => {
                 scene.setFrameListener(null);
@@ -274,11 +383,25 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
       }, GO_HOLD_MS);
     };
     later(() => tickCountdown(2), COUNTDOWN_INTERVAL_MS);
-  }, [canRecord, canStart, card, clearTimers, discardRecording, distance, entries, later, nextRaceNumber, onFinish]);
+  }, [
+    beginNews,
+    canRecord,
+    canStart,
+    card,
+    clearTimers,
+    discardRecording,
+    distance,
+    entries,
+    later,
+    nextRaceNumber,
+    onFinish,
+  ]);
 
   const reset = useCallback(() => {
     clearTimers();
     discardRecording();
+    setNews(null);
+    setBlackout("none");
     sceneRef.current?.resetToGate();
     setPhase("idle");
     setCountdown(null);
@@ -420,7 +543,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
       <div ref={wrapRef} className={`race-stage-wrap ${isFullscreen ? "is-fullscreen" : ""}`}>
         <div ref={stageRef} className="race-stage" />
         {/* 映画のようなシネマスコープの黒帯。レースの間だけ上下から差し込む（文字や操作のボタンは帯の上に重なる） */}
-        <div className={`race-letterbox ${phase !== "idle" ? "is-active" : ""}`} aria-hidden="true" />
+        <div className={`race-letterbox ${phase !== "idle" && !news ? "is-active" : ""}`} aria-hidden="true" />
 
         {sceneError && <div className="race-stage-error">{t("race.webglError")}</div>}
         {!sceneReady && !sceneError && <div className="race-stage-loading">{t("race.loading")}</div>}
@@ -482,7 +605,19 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
         {slowMotion && <div className="race-slowmo">{t("race.slowMotion")}</div>}
         {photoFlash && <div className="race-photo-flash" aria-hidden="true" />}
 
-        {commentary && phase !== "idle" && (
+        {news && news.segments[news.index] && (
+          <NewsOverlay
+            segment={news.segments[news.index]}
+            index={news.index}
+            shoulder={news.shoulder}
+            raceTitle={news.title}
+            onSkip={skipNews}
+          />
+        )}
+
+        {blackout !== "none" && <div className={`news-blackout news-blackout--${blackout}`} aria-hidden="true" />}
+
+        {commentary && phase !== "idle" && !news && (
           <div className="race-commentary" aria-live="polite">
             <span className="race-commentary-mic">🎙</span>
             <span key={`${commentary.key}-${JSON.stringify(commentary.params)}`} className="race-commentary-text">
@@ -491,7 +626,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
           </div>
         )}
 
-        {phase === "finished" && outcome && winnerEntry && (
+        {phase === "finished" && outcome && winnerEntry && !news && (
           <div className="race-result-overlay">
             <div className="race-result-title">{t("race.result.title")}</div>
             <ol className="race-result-list">

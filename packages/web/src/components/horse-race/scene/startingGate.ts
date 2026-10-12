@@ -88,6 +88,13 @@ export class StartingGate {
   private readonly modelDoors: DoorSet[] = [];
   private openAmount = 0;
   private opening = false;
+  /**
+   * 枠入り確認ランプ。ゲートの前面の赤いランプで、全馬の枠入りが終わったら後ろの発走委員が点け、
+   * 台の上のスターターに知らせる（JRA は 2008 年から）。ゲートが開いて馬が出たら消す
+   */
+  private lampOn = false;
+  /** ゲートが開いてからランプを消すまでの残り秒数（消す予定がなければ Infinity） */
+  private lampOffIn = Infinity;
   private readonly matrix = new THREE.Matrix4();
   private readonly quaternion = new THREE.Quaternion();
   private readonly up = new THREE.Vector3(0, 1, 0);
@@ -142,8 +149,9 @@ export class StartingGate {
         material = new THREE.MeshStandardMaterial({ color: "#121212", roughness: 0.9 });
         break;
       case "GateLamp":
-        // 枠入り確認ランプ。ブルームで少し光って見える明るさ
-        material = new THREE.MeshStandardMaterial({ color: "#ff3b30", emissive: "#ff2a1a", emissiveIntensity: 2.2 });
+        // 枠入り確認ランプ。点いている間はブルームで少し光って見える明るさ、消えている間は暗い赤のレンズ
+        material = new THREE.MeshStandardMaterial({ color: "#ff3b30", emissive: "#ff2a1a", roughness: 0.3 });
+        this.applyLamp(material as THREE.MeshStandardMaterial);
         break;
       default:
         material = new THREE.MeshStandardMaterial({ color: "#888888", roughness: 0.6 });
@@ -265,24 +273,46 @@ export class StartingGate {
     });
   }
 
+  /** 枠入り確認ランプを点ける / 消す */
+  setLamp(on: boolean) {
+    this.lampOn = on;
+    this.lampOffIn = Infinity;
+    const lamp = this.materials.get("GateLamp");
+    if (lamp instanceof THREE.MeshStandardMaterial) this.applyLamp(lamp);
+  }
+
+  private applyLamp(material: THREE.MeshStandardMaterial) {
+    material.emissiveIntensity = this.lampOn ? 2.2 : 0;
+    material.color.set(this.lampOn ? "#ff3b30" : "#4a1412");
+  }
+
   open() {
     this.opening = true;
+    // 馬がゲートを出たところで消す
+    if (this.lampOn) this.lampOffIn = 1.2;
   }
 
   close() {
     this.opening = false;
     this.openAmount = 0;
+    this.setLamp(false);
     this.apply();
   }
 
-  /** 作り直したゲートに、開閉の途中の状態を引き継ぐ */
+  /** 作り直したゲートに、開閉の途中の状態とランプを引き継ぐ */
   copyStateFrom(other: StartingGate) {
     this.opening = other.opening;
     this.openAmount = other.openAmount;
+    this.setLamp(other.lampOn);
+    this.lampOffIn = other.lampOffIn;
     this.apply();
   }
 
   update(dt: number) {
+    if (this.lampOffIn !== Infinity) {
+      this.lampOffIn -= dt;
+      if (this.lampOffIn <= 0) this.setLamp(false);
+    }
     if (!this.opening || this.openAmount >= 1) return;
     this.openAmount = Math.min(1, this.openAmount + dt * 4.5);
     this.apply();

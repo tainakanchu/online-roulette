@@ -216,6 +216,53 @@
       "close": "{{first}}と{{second}}、並んだ並んだ！",
       "finish": "{{name}}、いまゴールイン！",
       "photo": "ほとんど並んでゴール！ 写真判定… 勝ったのは{{name}}！"
+    },
+    "news": {
+      "skip": "ニュースをとばす",
+      "corner": "競馬",
+      "vtr": {
+        "front": "スタートから先頭に立った{{winner}}が、そのまま最後まで逃げ切りました。",
+        "stalker": "好位につけた{{winner}}が、直線で抜け出しました。",
+        "closer": "中団で脚をためた{{winner}}が、直線で鋭く差し切りました。",
+        "deep": "後方に控えた{{winner}}が、直線で大外から一気に追い込みました。"
+      },
+      "resultTitle": "レース結果",
+      "lengths": "{{margin}}馬身",
+      "telop": {
+        "headline": "{{race}}　{{winner}}が優勝",
+        "vtr": "{{race}}（{{course}}）",
+        "time": "勝ちタイム {{time}}（{{course}}）"
+      },
+      "headline": {
+        "photo": "{{race}}は写真判定にもつれる大接戦。制したのは{{winner}}でした。",
+        "rout": "{{race}}は{{winner}}が後続に{{margin}}をつける圧勝です。",
+        "upset": "{{race}}は{{popularity}}番人気の{{winner}}が勝ち、波乱の結果となりました。",
+        "favorite": "{{race}}は1番人気の{{winner}}が期待に応えて優勝しました。",
+        "standard": "{{race}}は{{winner}}が優勝しました。"
+      },
+      "result": {
+        "placings": "2着は{{second}}、3着は{{third}}。勝ちタイムは{{time}}でした。",
+        "second": "2着は{{second}}。勝ちタイムは{{time}}でした。"
+      },
+      "comment": {
+        "photo": "最後まで目の離せない、見ごたえのあるレースでしたね。",
+        "rout": "強い勝ち方でした。次のレースも楽しみです。",
+        "upset": "これは驚きの結果となりました。",
+        "favorite": "さすがの走りでしたね。",
+        "standard": "見事なレースでした。"
+      },
+      "closing": "以上、競馬のニュースでした。",
+      "bigMargin": "大差",
+      "cue": {
+        "next": "このあとVTR",
+        "hurry": "巻きで！",
+        "left": "あと{{seconds}}秒",
+        "ten": "10秒前",
+        "five": "5秒前",
+        "break": "CMいきます"
+      },
+      "vtrMark": "VTR",
+      "endCard": "次のレースもお楽しみに"
     }
   }
 }

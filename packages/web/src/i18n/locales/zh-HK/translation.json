@@ -216,6 +216,53 @@
       "close": "{{first}}同{{second}}，並排衝刺！",
       "finish": "{{name}}衝過終點！",
       "photo": "幾乎同時衝線！影相判定…勝出的是{{name}}！"
+    },
+    "news": {
+      "skip": "略過新聞",
+      "corner": "賽馬",
+      "vtr": {
+        "front": "{{winner}}一出閘就領放，一路領先到終點。",
+        "stalker": "{{winner}}守在前列，直路上脫穎而出。",
+        "closer": "{{winner}}喺中間留力，直路上強勢追過。",
+        "deep": "{{winner}}原本包尾，直路由大外疊一口氣追上。"
+      },
+      "resultTitle": "賽果",
+      "lengths": "{{margin}}個馬位",
+      "telop": {
+        "headline": "{{race}}　{{winner}}勝出",
+        "vtr": "{{race}}（{{course}}）",
+        "time": "頭馬時間 {{time}}（{{course}}）"
+      },
+      "headline": {
+        "photo": "{{race}}要靠影相判定分勝負，最後由{{winner}}勝出。",
+        "rout": "{{race}}由{{winner}}以{{margin}}輕鬆勝出。",
+        "upset": "{{race}}爆冷，第{{popularity}}熱門的{{winner}}勝出。",
+        "favorite": "{{race}}由大熱門{{winner}}不負眾望勝出。",
+        "standard": "{{race}}由{{winner}}勝出。"
+      },
+      "result": {
+        "placings": "第二名係{{second}}，第三名係{{third}}。頭馬時間{{time}}。",
+        "second": "第二名係{{second}}。頭馬時間{{time}}。"
+      },
+      "comment": {
+        "photo": "一場由頭睇到尾都好緊張嘅賽事。",
+        "rout": "贏得好威，期待佢下一場。",
+        "upset": "真係估唔到嘅結果。",
+        "favorite": "果然係大熱門。",
+        "standard": "精彩嘅一場賽事。"
+      },
+      "closing": "以上係賽馬新聞。",
+      "bigMargin": "大差距",
+      "cue": {
+        "next": "跟住播VTR",
+        "hurry": "快啲！",
+        "left": "仲有{{seconds}}秒",
+        "ten": "倒數10秒",
+        "five": "倒數5秒",
+        "break": "入廣告"
+      },
+      "vtrMark": "VTR",
+      "endCard": "下場賽事再見"
     }
   }
 }
