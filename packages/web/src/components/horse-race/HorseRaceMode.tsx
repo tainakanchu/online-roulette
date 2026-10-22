@@ -28,8 +28,6 @@ const MOUNT_CALL_MS = 1800;
 const NEWS_FADE_MS = BLACKOUT_MS;
 /** 着差がこれより大きいと「大差」と読む（馬身） */
 const BIG_MARGIN_LENGTHS = 10.5;
-/** 勝ち馬がゴールするまでの実時間（スローモーション分は別途伸びる）。長い距離ほど少し速く流す */
-const raceSeconds = (meters: number) => 15 * Math.pow(meters / 1600, 0.85);
 
 type Phase = "idle" | "countdown" | "racing" | "finished";
 
@@ -416,7 +414,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
           setCountdown(null);
           setPhase("racing");
           setCommentary(commentator.start());
-          scene.startRace(race, raceSeconds(distance), {
+          scene.startRace(race, {
             onTick: (tick: RaceTick) => {
               setLiveOrder(tick.order);
               setRemaining(tick.remainingMeters);

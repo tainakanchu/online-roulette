@@ -834,11 +834,10 @@ export class RaceScene {
   }
 
   /**
-   * @param durationSeconds 勝ち馬がゴールするまでの実時間（スローモーション分は伸びる）
+   * 勝ち馬は実際のレースと同じ時間（勝ち時計）でゴールする。スローモーション分はさらに伸びる
    */
-  startRace(race: RaceSimulation, durationSeconds: number, callbacks: RaceCallbacks) {
+  startRace(race: RaceSimulation, callbacks: RaceCallbacks) {
     this.race = race;
-    this.raceRate = Math.max(0.1, winnerTime(race)) / durationSeconds;
     this.raceT = 0;
     this.timeScale = 1;
     this.running = true;
@@ -851,6 +850,8 @@ export class RaceScene {
     // 勝ち馬はレース内部時刻 winnerTime でゴールするので、それが勝ち時計になるよう換算する
     this.winnerSeconds = winningTimeSeconds(this.distanceMeters, this.surface, this.going, Math.random() * 2 - 1);
     this.secondsPerUnit = this.winnerSeconds / Math.max(0.1, winnerTime(race));
+    // 再生速度も勝ち時計に合わせる（画面の時計と実際の経過時間が一致する）
+    this.raceRate = 1 / this.secondsPerUnit;
     this.resetFinishState();
     // 決勝写真: 勝ち馬はレース内部時刻 winnerTime でゴールするので、その少し前から撮る
     const unitsPerTime = (FINISH_X - this.startX) / Math.max(0.1, winnerTime(race));
