@@ -726,7 +726,7 @@ export class RaceScene {
     const replaced = new Map<HorseModel, HorseModel>();
     const next = specs.map((spec) => {
       const old = pool.get(spec.name)?.shift();
-      const isSame = old && old.spec.number === spec.number && old.spec.color === spec.color && old.spec.seed === spec.seed;
+      const isSame = old && old.spec.number === spec.number && old.spec.color === spec.color && old.spec.seed === spec.seed && old.spec.login === spec.login;
       if (old && isSame) return old;
       const horse = new HorseModel(spec);
       this.scene.add(horse.root);

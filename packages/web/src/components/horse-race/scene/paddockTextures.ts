@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { drawAvatarBadge } from "./githubAvatar";
 
 /**
  * 競馬ゲームのパドック（下見所）および出走馬用プロシージャルテクスチャ群。
@@ -756,7 +757,8 @@ export const createPaddockSignTexture = (
 export const createZekkenTexture = (
   number: number,
   name: string,
-  color: string
+  color: string,
+  avatar?: CanvasImageSource
 ): THREE.CanvasTexture => {
   const WIDTH = 256;
   const HEIGHT = 192;
@@ -841,6 +843,9 @@ export const createZekkenTexture = (
     : `bold 64px ${SYSTEM_FONT_FAMILY}`;
   ctx.fillText(numStr, WIDTH / 2, plateY + plateH / 2 + 2);
   ctx.restore();
+
+  // GitHub 連携した馬は、馬番プレートの左にアバターを縫い付ける
+  if (avatar) drawAvatarBadge(ctx, avatar, plateX / 2 + 4, plateY + plateH / 2, 29);
 
   // 5. 下部の馬名（カタカナ 9 文字まで）
   // 枠色によらず明瞭に読めるよう、黒のドロップシャドウ/アウトライン付きの白文字で印字
