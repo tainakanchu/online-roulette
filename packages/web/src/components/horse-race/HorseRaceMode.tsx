@@ -13,6 +13,7 @@ import { BLACKOUT_MS } from "./recorderNews";
 import { NewsOverlay } from "./NewsOverlay";
 import { PaddockTelop } from "./PaddockTelop";
 import { horseWeight, weightChange } from "../../utils/paddock";
+import { isValidLogin } from "../../utils/githubLogin";
 import { buildRaceNews, cueCardAt, type NewsSegment } from "../../utils/raceNews";
 import type { NewsWallInfo, PaddockFocus, RaceScene, RaceTick } from "./scene/RaceScene";
 
@@ -152,7 +153,7 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
 
   // ----- 出走馬・距離が変わったらゲートに並べ直す -----
   const fieldKey = useMemo(
-    () => entries.map((e) => `${e.name}\u0000${e.color}`).join("\u0001") + `|${distance}`,
+    () => entries.map((e) => `${e.name}\u0000${e.color}\u0000${e.login}`).join("\u0001") + `|${distance}`,
     [entries, distance]
   );
   useEffect(() => {
@@ -161,7 +162,13 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     clearTimers();
     discardRecording();
     scene.setField(
-      entries.map((e) => ({ number: e.number, name: e.name, color: e.color, seed: e.seed })),
+      entries.map((e) => ({
+        number: e.number,
+        name: e.name,
+        color: e.color,
+        seed: e.seed,
+        login: isValidLogin(e.login) ? e.login : undefined,
+      })),
       distance
     );
     setPhase("idle");
