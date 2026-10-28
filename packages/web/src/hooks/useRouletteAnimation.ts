@@ -49,7 +49,7 @@ export const useRouletteAnimation = ({
     const baseRotation = rouletteLogic.calculateRotation();
     // 時短モードの場合はアニメーション時間と回転数を短縮
     const totalRotation = quickMode
-      ? baseRotation.totalRotation * 0.4
+      ? baseRotation.totalRotation - 360 * 6
       : baseRotation.totalRotation;
     const duration = quickMode ? baseRotation.duration * 0.4 : baseRotation.duration;
     const startTime = Date.now();
