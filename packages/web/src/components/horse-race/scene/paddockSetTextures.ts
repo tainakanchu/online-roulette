@@ -27,11 +27,6 @@ import * as THREE from "three";
  *    - G: 小石・木くず（点在）
  *    - B: 湿り（暗く艶が出る所）
  *    - A: 高さ
- * 4. createRailPaintDetail() — 白い手すり（パイプ）の塗装。周期 1.0。
- *    - R: 塗装のむらと刷毛跡
- *    - G: 手が触れる所のくすみ・汚れ（低周波のむら）
- *    - B: 小さな塗装の欠け（大半 0、点在して 1）
- *    - A: 高さ（欠けの縁）
  * 5. createTerraceConcreteDetail() — 観客の段々・通路のコンクリート（屋外で雨ざらし）。周期 2.5。
  *    - R: 打ち放しのむら・骨材
  *    - G: 雨だれや水たまり跡の黒ずみ（低周波）
@@ -432,81 +427,6 @@ export const createSoilDetail = (): THREE.Data3DTexture => {
     let a = 0.48 + clump * 0.7 + grain * 0.4 + micro * 0.3;
     if (isPebble) {
       a += 0.22;
-    }
-    a = clamp(a, 0.0, 1.0);
-
-    const idx = i * 4;
-    data[idx] = Math.round(r * 255);
-    data[idx + 1] = Math.round(g * 255);
-    data[idx + 2] = Math.round(b * 255);
-    data[idx + 3] = Math.round(a * 255);
-  }
-
-  return createData3D(data, SIZE, SIZE, SIZE);
-};
-
-// =============================================================================
-// 4. 白い手すりの塗装 (createRailPaintDetail) — 周期 1.0
-// =============================================================================
-
-/**
- * 白い手すり（パイプ）の塗装用 3D テクスチャを生成する。
- *
- * 【サンプリング方法】
- * シェーダー内ではワールド座標を 1.0 で除算してサンプリングする:
- *   vec4 railDetail = texture(uRailPaintDetail, worldPos / 1.0);
- *
- * 【サイズ・形式】
- * 64x64x64 ボクセル、RGBA8。3 軸すべて RepeatWrapping、generateMipmaps = true。
- *
- * 【各チャンネルの役割】
- * - R: 塗装のむらと刷毛跡（長手方向の微細な塗り筋。平均約 0.50）
- * - G: 手が触れる所のくすみ・汚れ（低周波のくすみむら。平均約 0.35）
- * - B: 小さな塗装の欠け（大半 0、点在して 1.0）
- * - A: 高さ（塗膜の平滑さと欠けの段差縁。平均約 0.50）
- *
- * Why not: 手すりパイプは来場者が触れたり風雨に晒されたりして角や継手から塗膜が微小に剥落するため、
- * 欠けマスク B と段差エッジ A を連動させてリアルなペイントチップを再現する。
- */
-export const createRailPaintDetail = (): THREE.Data3DTexture => {
-  const SIZE = 64;
-  const TOTAL = SIZE * SIZE * SIZE;
-  const rng = createSeededRandom(92837461);
-
-  // 刷毛跡（X/Z 軸方向に筋、低周波塗装むら 3 周期）、手のくすみ（低周波 2 周期）、塗装欠け（6 周期）
-  const brushNoise = createPeriodicNoise3D(SIZE, SIZE, SIZE, 16, 2, 16, rng);
-  const paintUnevenNoise = createPeriodicNoise3D(SIZE, SIZE, SIZE, 3, 3, 3, rng);
-  const grimeNoise = createPeriodicNoise3D(SIZE, SIZE, SIZE, 2, 2, 2, rng);
-  const chipNoise = createPeriodicNoise3D(SIZE, SIZE, SIZE, 6, 6, 6, rng);
-
-  const data = new Uint8Array(TOTAL * 4);
-
-  for (let i = 0; i < TOTAL; i += 1) {
-    const microRand = rng();
-
-    // --- R: 塗装のむらと刷毛跡 ---
-    const brush = (brushNoise[i] - 0.5) * 0.16;
-    const uneven = (paintUnevenNoise[i] - 0.5) * 0.14;
-    let r = 0.50 + brush + uneven + (microRand - 0.5) * 0.05;
-    r = clamp(r, 0.0, 1.0);
-
-    // --- G: 手が触れる所のくすみ・汚れ（低周波の皮脂・埃くすみ） ---
-    const grime = grimeNoise[i];
-    let g = 0.20 + grime * 0.35 + (microRand - 0.5) * 0.06;
-    g = clamp(g, 0.0, 1.0);
-
-    // --- B: 小さな塗装の欠け（大半 0、点在して 1.0） ---
-    const chipVal = chipNoise[i];
-    let b = 0.0;
-    const isChip = chipVal > 0.85 && microRand > 0.65;
-    if (isChip) {
-      b = 1.0;
-    }
-
-    // --- A: 高さ（平滑な塗装面 0.50、欠け部分は急激に凹む 0.20） ---
-    let a = 0.50 + brush * 0.25;
-    if (isChip) {
-      a = 0.20;
     }
     a = clamp(a, 0.0, 1.0);
 
