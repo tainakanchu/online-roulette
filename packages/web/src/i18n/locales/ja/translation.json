@@ -8,9 +8,7 @@
     "title": "選択肢",
     "placeholder": "選択肢を改行で区切って入力してください",
     "shuffleCount": "シャッフル x",
-    "shuffle": "シャッフル",
-    "helpText": "※ URLのoptionsクエリパラメータでカンマ区切りの選択肢を指定することもできます",
-    "helpExample": "例: ?options=選択肢1,選択肢2,選択肢3"
+    "shuffle": "シャッフル"
   },
   "result": {
     "selecting": "選択中...",

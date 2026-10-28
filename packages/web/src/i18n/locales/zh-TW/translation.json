@@ -8,9 +8,7 @@
     "title": "你的選項",
     "placeholder": "請以換行分隔輸入選項",
     "shuffleCount": "打亂次數:",
-    "shuffle": "打亂",
-    "helpText": "※ 您也可以透過 URL 的 options 參數以逗號分隔指定選項",
-    "helpExample": "例: ?options=選項1,選項2,選項3"
+    "shuffle": "打亂"
   },
   "result": {
     "selecting": "選擇中...",

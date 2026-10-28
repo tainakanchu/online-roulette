@@ -8,9 +8,7 @@
     "title": "Pilihan Anda",
     "placeholder": "Masukkan pilihan yang dipisahkan dengan baris baru",
     "shuffleCount": "Jumlah acak:",
-    "shuffle": "Acak",
-    "helpText": "* Anda juga dapat menentukan pilihan yang dipisahkan koma melalui parameter options di URL",
-    "helpExample": "Contoh: ?options=Pilihan1,Pilihan2,Pilihan3"
+    "shuffle": "Acak"
   },
   "result": {
     "selecting": "Memilih...",
