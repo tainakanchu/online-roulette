@@ -21,6 +21,7 @@ import {
   type RunningStyle,
 } from "@tainakanchu/roulette-core";
 import {
+  getOwnValue,
   loadActivityCache,
   loadDistance,
   loadGitHubLogins,
@@ -124,8 +125,10 @@ export const useRaceCard = (options: string[]) => {
     () =>
       names.map((name, index) => {
         const finishes = recentFinishes(name, history);
-        const login = logins[name] ?? "";
-        const activity = login ? (activityCache[login.toLowerCase()]?.activity ?? null) : null;
+        const login = getOwnValue(logins, name) ?? "";
+        const activity = login
+          ? (getOwnValue(activityCache, login.toLowerCase())?.activity ?? null)
+          : null;
         const rating = computeRating(
           formScore(finishes),
           activity ? activityScore(activity) : null
@@ -189,10 +192,9 @@ export const useRaceCard = (options: string[]) => {
 
   const setLogin = useCallback((name: string, value: string) => {
     setLogins((prev) => {
-      const next = { ...prev };
       const login = normalizeLogin(value);
-      if (login) next[name] = login;
-      else delete next[name];
+      const next = { ...prev, [name]: login };
+      if (!login) delete next[name];
       saveGitHubLogins(next);
       return next;
     });
@@ -201,7 +203,9 @@ export const useRaceCard = (options: string[]) => {
   const fetchActivities = useCallback(async () => {
     const now = Date.now();
     const targets = Array.from(
-      new Set(names.map((name) => logins[name]).filter((login): login is string => !!login))
+      new Set(
+        names.map((name) => getOwnValue(logins, name)).filter((login): login is string => !!login)
+      )
     );
     for (const login of targets) {
       const key = login.toLowerCase();
@@ -209,7 +213,7 @@ export const useRaceCard = (options: string[]) => {
         setGithubStatus((prev) => ({ ...prev, [key]: "invalid" }));
         continue;
       }
-      const cached = activityCache[key];
+      const cached = getOwnValue(activityCache, key);
       if (cached && now - cached.fetchedAt < ACTIVITY_TTL_MS) continue;
       setGithubStatus((prev) => ({ ...prev, [key]: "loading" }));
       try {

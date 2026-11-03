@@ -2,7 +2,12 @@ import { type FC, memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { activityScore, distanceCategory } from "@tainakanchu/roulette-core";
 import type { GitHubStatus, RaceEntry } from "../../hooks/useRaceCard";
-import { MAX_RACE_NAME_LENGTH, RACE_GRADES, type RaceGrade } from "../../utils/horseRaceStorage";
+import {
+  getOwnValue,
+  MAX_RACE_NAME_LENGTH,
+  RACE_GRADES,
+  type RaceGrade,
+} from "../../utils/horseRaceStorage";
 import type { TrackGoing, TrackSurface } from "../../utils/raceCourse";
 import { stretchWind, type RaceWind } from "../../utils/raceWind";
 import { frameNumber } from "../../utils/raceFrame";
@@ -284,8 +289,8 @@ export const RaceCard: FC<RaceCardProps> = memo(function RaceCard({
           <p className="race-github-desc">{t("race.github.description")}</p>
           <div className="race-github-list">
             {entries.map((entry) => {
-              const login = logins[entry.name] ?? "";
-              const status = login ? githubStatus[login.toLowerCase()] : undefined;
+              const login = getOwnValue(logins, entry.name) ?? "";
+              const status = login ? getOwnValue(githubStatus, login.toLowerCase()) : undefined;
               return (
                 <label key={`${entry.index}-${entry.name}`} className="race-github-row">
                   <span className="race-github-name">
