@@ -58,7 +58,7 @@ export const OptionEditor: FC<OptionEditorProps> = ({
             type="button"
             className="option-tool-button option-tool-button--danger"
             onClick={onClearOptions}
-            disabled={!hasOptions}
+            disabled={disabled || !hasOptions}
           >
             🗑 {t("ui.clear")}
           </button>
@@ -81,6 +81,7 @@ export const OptionEditor: FC<OptionEditorProps> = ({
                 type="button"
                 className="chip-remove"
                 onClick={() => onRemoveOption(index)}
+                disabled={disabled}
                 aria-label={`remove ${label}`}
               >
                 ×
