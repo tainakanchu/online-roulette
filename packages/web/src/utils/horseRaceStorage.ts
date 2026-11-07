@@ -15,6 +15,9 @@ const ACTIVITY_KEY = "roulette-horse-race-github-activity";
 
 const MAX_HISTORY = 100;
 
+export const getOwnValue = <T>(record: Record<string, T>, key: string): T | undefined =>
+  Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+
 const readJson = <T>(key: string, fallback: T): T => {
   const raw = readLocalStorage(key);
   if (!raw) return fallback;
