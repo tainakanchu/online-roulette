@@ -203,9 +203,9 @@ export const computeRating = (
 
 /**
  * 能力値 → 当たりやすさ。
- * 「少し効かせる」ために ±8% 程度の差にとどめる。
+ * 「少し効かせる」ために ±3% 程度の差にとどめる。
  */
-export const STRENGTH_SPREAD = 0.08;
+export const STRENGTH_SPREAD = 0.03;
 export const strengthFromRating = (rating: number): number =>
   1 + (STRENGTH_SPREAD * (rating - 70)) / 30;
 
