@@ -82,10 +82,18 @@ export const saveRaceName = (name: string) => {
 export const RACE_GRADES = ["G1", "G2", "G3", "OP", ""] as const;
 export type RaceGrade = (typeof RACE_GRADES)[number];
 
-export const loadRaceGrade = (): RaceGrade => {
-  const value = readLocalStorage(RACE_GRADE_KEY);
-  return RACE_GRADES.find((grade) => grade === value) ?? "G1";
-};
+export const parseRaceGrade = (value: unknown): RaceGrade | null =>
+  RACE_GRADES.find((grade) => grade === value) ?? null;
+
+export const loadRaceGrade = (): RaceGrade => parseRaceGrade(readLocalStorage(RACE_GRADE_KEY)) ?? "G1";
+
+// URL クエリでは格付けなし（空文字）を "none" で表す
+const NO_GRADE_QUERY = "none";
+
+export const raceGradeToQuery = (grade: RaceGrade): string => grade || NO_GRADE_QUERY;
+
+export const raceGradeFromQuery = (value: string | null): RaceGrade | null =>
+  value === NO_GRADE_QUERY ? "" : value ? parseRaceGrade(value) : null;
 
 export const saveRaceGrade = (grade: RaceGrade) => {
   writeLocalStorage(RACE_GRADE_KEY, grade);
