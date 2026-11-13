@@ -5,6 +5,8 @@ export const QUERY_KEYS = {
   distance: "distance",
   surface: "surface",
   going: "going",
+  raceName: "raceName",
+  raceGrade: "grade",
 } as const;
 
 export const readQueryParam = (key: string): string | null =>

@@ -30,6 +30,8 @@ import {
   loadRaceGrade,
   loadRaceName,
   normalizeRaceName,
+  raceGradeFromQuery,
+  raceGradeToQuery,
   saveActivityCache,
   saveDistance,
   saveGitHubLogins,
@@ -86,8 +88,13 @@ export const useRaceCard = (options: string[]) => {
   const [distance, setDistanceState] = useState<number>(
     () => parseDistance(readQueryParam(QUERY_KEYS.distance)) ?? loadDistance()
   );
-  const [raceName, setRaceNameState] = useState<string>(loadRaceName);
-  const [raceGrade, setRaceGradeState] = useState<RaceGrade>(loadRaceGrade);
+  const [raceName, setRaceNameState] = useState<string>(() => {
+    const value = readQueryParam(QUERY_KEYS.raceName);
+    return value !== null ? normalizeRaceName(value) : loadRaceName();
+  });
+  const [raceGrade, setRaceGradeState] = useState<RaceGrade>(
+    () => raceGradeFromQuery(readQueryParam(QUERY_KEYS.raceGrade)) ?? loadRaceGrade()
+  );
   const [surface, setSurfaceState] = useState<TrackSurface>(
     () => parseSurface(readQueryParam(QUERY_KEYS.surface)) ?? loadSurface()
   );
@@ -104,18 +111,23 @@ export const useRaceCard = (options: string[]) => {
 
   const names = useMemo(() => options.slice(0, MAX_HORSES), [options]);
 
-  // 距離・コース・馬場状態を URL クエリに反映する（競馬モードを離れたら取り除く）
+  // レース名・格付け・距離・コース・馬場状態を URL クエリに反映する（競馬モードを離れたら取り除く）
+  // レース名は空でも書く（共有先で、その人が保存しているレース名に置き換わらないようにする）
   useEffect(() => {
     writeQueryParams({
+      [QUERY_KEYS.raceName]: raceName,
+      [QUERY_KEYS.raceGrade]: raceGradeToQuery(raceGrade),
       [QUERY_KEYS.distance]: String(distance),
       [QUERY_KEYS.surface]: surface,
       [QUERY_KEYS.going]: going,
     });
-  }, [distance, surface, going]);
+  }, [raceName, raceGrade, distance, surface, going]);
 
   useEffect(
     () => () =>
       writeQueryParams({
+        [QUERY_KEYS.raceName]: null,
+        [QUERY_KEYS.raceGrade]: null,
         [QUERY_KEYS.distance]: null,
         [QUERY_KEYS.surface]: null,
         [QUERY_KEYS.going]: null,

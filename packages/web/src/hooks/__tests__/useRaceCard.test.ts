@@ -124,3 +124,73 @@ it("falls back to stored values when the URL query is invalid", () => {
     act(() => root.unmount());
   }
 });
+
+it("restores race name and grade from the URL query and syncs changes back", () => {
+  window.localStorage.clear();
+  window.localStorage.setItem("roulette-horse-race-name", "保存済みの名前");
+  window.localStorage.setItem("roulette-horse-race-grade", "G1");
+  window.history.replaceState(null, "", `/?raceName=${encodeURIComponent("有馬記念")}&grade=G2`);
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  let card: ReturnType<typeof useRaceCard>;
+  function Harness() {
+    card = useRaceCard(["A"]);
+    return null;
+  }
+  try {
+    act(() => root.render(createElement(Harness)));
+    expect(card!.raceName).toBe("有馬記念");
+    expect(card!.raceGrade).toBe("G2");
+
+    act(() => card!.setRaceName(""));
+    act(() => card!.setRaceGrade(""));
+    const params = new URLSearchParams(window.location.search);
+    // 空のレース名も明示的に書き、格付けなしは none で表す
+    expect(params.get("raceName")).toBe("");
+    expect(params.get("grade")).toBe("none");
+  } finally {
+    act(() => root.unmount());
+  }
+  const params = new URLSearchParams(window.location.search);
+  expect(params.get("raceName")).toBeNull();
+  expect(params.get("grade")).toBeNull();
+});
+
+it("treats an empty race name and grade=none in the URL as explicit values", () => {
+  window.localStorage.clear();
+  window.localStorage.setItem("roulette-horse-race-name", "保存済みの名前");
+  window.history.replaceState(null, "", "/?raceName=&grade=none");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  let card: ReturnType<typeof useRaceCard>;
+  function Harness() {
+    card = useRaceCard(["A"]);
+    return null;
+  }
+  try {
+    act(() => root.render(createElement(Harness)));
+    expect(card!.raceName).toBe("");
+    expect(card!.raceGrade).toBe("");
+  } finally {
+    act(() => root.unmount());
+  }
+});
+
+it("falls back to the stored grade when the URL grade is invalid", () => {
+  window.localStorage.clear();
+  window.localStorage.setItem("roulette-horse-race-grade", "G3");
+  window.history.replaceState(null, "", "/?grade=G9");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  let card: ReturnType<typeof useRaceCard>;
+  function Harness() {
+    card = useRaceCard(["A"]);
+    return null;
+  }
+  try {
+    act(() => root.render(createElement(Harness)));
+    expect(card!.raceGrade).toBe("G3");
+  } finally {
+    act(() => root.unmount());
+  }
+});
