@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   COLORS,
   MAX_HORSES,
   activityScore,
   clampDistance,
   computeRating,
+  parseDistance,
   estimateWinProbabilities,
   formScore,
   marksFromProbabilities,
@@ -41,6 +42,8 @@ import {
 import {
   loadGoing,
   loadSurface,
+  parseGoing,
+  parseSurface,
   saveGoing,
   saveSurface,
   type TrackGoing,
@@ -53,6 +56,7 @@ import {
   isValidLogin,
   normalizeLogin,
 } from "../utils/githubActivity";
+import { QUERY_KEYS, readQueryParam, writeQueryParams } from "../utils/urlQuery";
 
 const ACTIVITY_TTL_MS = 60 * 60 * 1000;
 
@@ -78,13 +82,20 @@ export interface RaceEntry {
 
 /** 出走表（競馬新聞）に必要なデータをまとめて管理する */
 export const useRaceCard = (options: string[]) => {
-  const [distance, setDistanceState] = useState<number>(loadDistance);
+  // URL クエリがあればそれを優先し、なければ前回の設定を使う
+  const [distance, setDistanceState] = useState<number>(
+    () => parseDistance(readQueryParam(QUERY_KEYS.distance)) ?? loadDistance()
+  );
   const [raceName, setRaceNameState] = useState<string>(loadRaceName);
   const [raceGrade, setRaceGradeState] = useState<RaceGrade>(loadRaceGrade);
-  const [surface, setSurfaceState] = useState<TrackSurface>(loadSurface);
-  const [going, setGoingState] = useState<TrackGoing>(loadGoing);
+  const [surface, setSurfaceState] = useState<TrackSurface>(
+    () => parseSurface(readQueryParam(QUERY_KEYS.surface)) ?? loadSurface()
+  );
+  const [going, setGoingState] = useState<TrackGoing>(
+    () => parseGoing(readQueryParam(QUERY_KEYS.going)) ?? loadGoing()
+  );
   // 会場の風。開いたときに決め、馬場状態を変えたら強さだけ決め直す（同じ日の同じ競馬場なので向きは変えない）
-  const [wind, setWind] = useState<RaceWind>(() => createRaceWind(loadGoing()));
+  const [wind, setWind] = useState<RaceWind>(() => createRaceWind(going));
   const [history, setHistory] = useState<RaceRecord[]>(loadRaceHistory);
   const [logins, setLogins] = useState<Record<string, string>>(loadGitHubLogins);
   const [activityCache, setActivityCache] =
@@ -92,6 +103,25 @@ export const useRaceCard = (options: string[]) => {
   const [githubStatus, setGithubStatus] = useState<Record<string, GitHubStatus>>({});
 
   const names = useMemo(() => options.slice(0, MAX_HORSES), [options]);
+
+  // 距離・コース・馬場状態を URL クエリに反映する（競馬モードを離れたら取り除く）
+  useEffect(() => {
+    writeQueryParams({
+      [QUERY_KEYS.distance]: String(distance),
+      [QUERY_KEYS.surface]: surface,
+      [QUERY_KEYS.going]: going,
+    });
+  }, [distance, surface, going]);
+
+  useEffect(
+    () => () =>
+      writeQueryParams({
+        [QUERY_KEYS.distance]: null,
+        [QUERY_KEYS.surface]: null,
+        [QUERY_KEYS.going]: null,
+      }),
+    []
+  );
 
   const setDistance = useCallback((meters: number) => {
     const value = clampDistance(meters);

@@ -73,3 +73,54 @@ it.each(names)("reads only own activity cache entries for %s", (login) => {
   expect(getOwnValue(loadActivityCache(), login)).toEqual(cached);
   window.localStorage.clear();
 });
+
+it("prefers URL query for distance and course, and syncs changes back to the URL", () => {
+  window.localStorage.clear();
+  window.history.replaceState(null, "", "/?mode=horseRace&distance=2400&surface=dirt&going=soft");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  let card: ReturnType<typeof useRaceCard>;
+  function Harness() {
+    card = useRaceCard(["A", "B"]);
+    return null;
+  }
+  try {
+    act(() => root.render(createElement(Harness)));
+    expect(card!.distance).toBe(2400);
+    expect(card!.surface).toBe("dirt");
+    expect(card!.going).toBe("soft");
+
+    act(() => card!.setDistance(1200));
+    act(() => card!.setSurface("turf"));
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("distance")).toBe("1200");
+    expect(params.get("surface")).toBe("turf");
+    expect(params.get("going")).toBe("soft");
+  } finally {
+    act(() => root.unmount());
+  }
+  // 競馬モードを離れたらコース系のクエリは消え、モードは残る
+  const params = new URLSearchParams(window.location.search);
+  expect(params.get("distance")).toBeNull();
+  expect(params.get("mode")).toBe("horseRace");
+});
+
+it("falls back to stored values when the URL query is invalid", () => {
+  window.localStorage.clear();
+  window.localStorage.setItem("roulette-horse-race-surface", "dirt");
+  window.history.replaceState(null, "", "/?distance=abc&surface=sand");
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  let card: ReturnType<typeof useRaceCard>;
+  function Harness() {
+    card = useRaceCard(["A"]);
+    return null;
+  }
+  try {
+    act(() => root.render(createElement(Harness)));
+    expect(card!.distance).toBe(1600);
+    expect(card!.surface).toBe("dirt");
+  } finally {
+    act(() => root.unmount());
+  }
+});

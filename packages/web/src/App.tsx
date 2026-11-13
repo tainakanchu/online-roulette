@@ -21,6 +21,7 @@ import { GroupAnimation } from "./components/GroupAnimation";
 import { GroupResultDisplay } from "./components/GroupResultDisplay";
 import { useGroupDivision } from "./hooks/useGroupDivision";
 import { readLocalStorage, writeLocalStorage } from "./utils/localStorage";
+import { QUERY_KEYS, readQueryParam, writeQueryParams } from "./utils/urlQuery";
 import { canvasToBlob } from "./utils/imageUtils";
 
 // スタイルのインポート
@@ -42,11 +43,16 @@ import "./styles/responsive.css";
 
 const MODE_STORAGE_KEY = "roulette-mode";
 
-const readInitialMode = (): AppMode => {
-  const stored = readLocalStorage(MODE_STORAGE_KEY);
-  if (stored === "grouping" || stored === "battle" || stored === "horseRace") return stored;
-  return "roulette";
-};
+const APP_MODES: readonly AppMode[] = ["roulette", "grouping", "battle", "horseRace"];
+
+const parseMode = (value: string | null): AppMode | null =>
+  APP_MODES.find((mode) => mode === value) ?? null;
+
+// URL クエリを優先し、なければ前回のモードを使う
+const readInitialMode = (): AppMode =>
+  parseMode(readQueryParam(QUERY_KEYS.mode)) ??
+  parseMode(readLocalStorage(MODE_STORAGE_KEY)) ??
+  "roulette";
 
 function App() {
   const { t } = useTranslation();
@@ -56,6 +62,7 @@ function App() {
 
   useEffect(() => {
     writeLocalStorage(MODE_STORAGE_KEY, mode);
+    writeQueryParams({ [QUERY_KEYS.mode]: mode });
   }, [mode]);
 
   // 選択肢が変化したときに古い結果（ルーレット当選・グループ）をリセットする
