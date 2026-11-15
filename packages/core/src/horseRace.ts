@@ -35,7 +35,9 @@ const LEGACY_DISTANCES: Record<string, number> = { sprint: 1200, mile: 1600, lon
 
 /** 保存値などから距離（m）を読み取る。読めなければ null */
 export const parseDistance = (value: unknown): number | null => {
-  if (typeof value === "string" && value in LEGACY_DISTANCES) return LEGACY_DISTANCES[value];
+  if (typeof value === "string" && Object.prototype.hasOwnProperty.call(LEGACY_DISTANCES, value)) {
+    return LEGACY_DISTANCES[value];
+  }
   const num = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
   if (!Number.isFinite(num) || num <= 0) return null;
   return clampDistance(num);

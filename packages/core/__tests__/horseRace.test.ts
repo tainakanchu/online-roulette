@@ -154,6 +154,13 @@ describe("horseRace", () => {
       expect(parseDistance(null)).toBeNull();
     });
 
+    it.each(["toString", "constructor", "__proto__"])(
+      "rejects inherited legacy distance key %s",
+      (value) => {
+        expect(parseDistance(value)).toBeNull();
+      }
+    );
+
     it("長い距離ほどゴールまでの単位が大きい", () => {
       expect(raceTarget(1600)).toBe(36);
       expect(raceTarget(3200)).toBe(72);
