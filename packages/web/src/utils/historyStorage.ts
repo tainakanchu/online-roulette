@@ -10,8 +10,17 @@ export const historyStorage = {
       if (!stored) {
         return { entries: [] };
       }
-      const history = JSON.parse(stored) as RouletteHistory;
-      return history;
+      const history = JSON.parse(stored) as unknown;
+      if (!history || typeof history !== "object" || !("entries" in history) || !Array.isArray(history.entries)) {
+        return { entries: [] };
+      }
+      return {
+        entries: history.entries.filter((entry): entry is RouletteHistoryEntry =>
+          entry !== null && typeof entry === "object" &&
+          typeof entry.result === "string" &&
+          typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+        ),
+      };
     } catch {
       return { entries: [] };
     }

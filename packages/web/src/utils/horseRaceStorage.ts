@@ -120,10 +120,28 @@ export interface CachedActivity {
   fetchedAt: number;
 }
 
+const isCachedActivity = (value: unknown): value is CachedActivity => {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.fetchedAt !== "number" ||
+    !Number.isFinite(record.fetchedAt) || record.fetchedAt < 0 ||
+    !record.activity || typeof record.activity !== "object"
+  ) return false;
+  const activity = record.activity as Record<string, unknown>;
+  return [activity.commits, activity.pullRequests, activity.reviews, activity.issues].every(
+    (counter) => typeof counter === "number" && Number.isFinite(counter) && counter >= 0
+  );
+};
+
 export const loadActivityCache = (): Record<string, CachedActivity> => {
   const value = readJson<unknown>(ACTIVITY_KEY, {});
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, CachedActivity>;
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, CachedActivity] => isCachedActivity(entry[1])
+    )
+  );
 };
 
 export const saveActivityCache = (cache: Record<string, CachedActivity>) => {
