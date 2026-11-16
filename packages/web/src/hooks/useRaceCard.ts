@@ -114,6 +114,11 @@ export const useRaceCard = (options: string[]) => {
   // レース名・格付け・距離・コース・馬場状態を URL クエリに反映する（競馬モードを離れたら取り除く）
   // レース名は空でも書く（共有先で、その人が保存しているレース名に置き換わらないようにする）
   useEffect(() => {
+    saveDistance(distance);
+    saveRaceName(raceName);
+    saveRaceGrade(raceGrade);
+    saveSurface(surface);
+    saveGoing(going);
     writeQueryParams({
       [QUERY_KEYS.raceName]: raceName,
       [QUERY_KEYS.raceGrade]: raceGradeToQuery(raceGrade),
@@ -138,28 +143,23 @@ export const useRaceCard = (options: string[]) => {
   const setDistance = useCallback((meters: number) => {
     const value = clampDistance(meters);
     setDistanceState(value);
-    saveDistance(value);
   }, []);
 
   const setRaceName = useCallback((value: string) => {
     const name = normalizeRaceName(value);
     setRaceNameState(name);
-    saveRaceName(name);
   }, []);
 
   const setRaceGrade = useCallback((grade: RaceGrade) => {
     setRaceGradeState(grade);
-    saveRaceGrade(grade);
   }, []);
 
   const setSurface = useCallback((value: TrackSurface) => {
     setSurfaceState(value);
-    saveSurface(value);
   }, []);
 
   const setGoing = useCallback((value: TrackGoing) => {
     setGoingState(value);
-    saveGoing(value);
     setWind((current) => changeWindForGoing(current, value));
   }, []);
 

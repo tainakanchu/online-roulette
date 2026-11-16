@@ -194,3 +194,40 @@ it("falls back to the stored grade when the URL grade is invalid", () => {
     act(() => root.unmount());
   }
 });
+
+it.each([
+  { raceName: "Shared", grade: "G2", raceGrade: "G2" },
+  { raceName: "", grade: "none", raceGrade: "" },
+])("retains URL settings after leaving and returning to horse mode: %j", (settings) => {
+  window.localStorage.clear();
+  for (const [key, value] of Object.entries({
+    distance: "1600", surface: "turf", going: "firm", name: "Old", grade: "G1",
+  })) {
+    window.localStorage.setItem(`roulette-horse-race-${key}`, value);
+  }
+  window.history.replaceState(null, "",
+    `/?mode=horseRace&distance=2400&surface=dirt&going=soft&raceName=${settings.raceName}&grade=${settings.grade}`);
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  let card: ReturnType<typeof useRaceCard>;
+  function Harness() {
+    card = useRaceCard(["A"]);
+    return null;
+  }
+  const expected = {
+    distance: 2400, surface: "dirt", going: "soft",
+    raceName: settings.raceName, raceGrade: settings.raceGrade,
+  };
+  try {
+    act(() => root.render(createElement(Harness)));
+    expect(card!).toMatchObject(expected);
+    act(() => root.render(null));
+    expect(window.location.search).toBe("?mode=horseRace");
+    act(() => root.render(createElement(Harness)));
+    expect(card!).toMatchObject(expected);
+  } finally {
+    act(() => root.unmount());
+    window.localStorage.clear();
+    window.history.replaceState(null, "", "/");
+  }
+});
