@@ -1,5 +1,6 @@
 // レース映像を 2D キャンバスに合成して MediaRecorder で録画する（1080p・H.264 の MP4 を優先）
 
+import { recordingBitsPerSecond } from "../../utils/raceTiming";
 import { drawBlackout, drawNews, RECORDER_FONT, roundRect, type RecorderBlackout, type RecorderNews } from "./recorderNews";
 
 export interface RecorderOverlay {
@@ -87,6 +88,11 @@ export class RaceRecorder {
   private lastFrameAt = -Infinity;
   private stopped = false;
 
+  /**
+   * @param expectedSeconds 録画の長さの見込み（秒）。長いレースでもファイルが大きくなりすぎないよう、ビットレートを下げる
+   */
+  constructor(private readonly expectedSeconds = 120) {}
+
   /** シーンの描画直後に呼ぶ（preserveDrawingBuffer なしでも読める） */
   captureFrame(source: HTMLCanvasElement) {
     if (this.stopped || !this.ctx || !this.format || source.width === 0) return;
@@ -148,7 +154,7 @@ export class RaceRecorder {
     this.stream = this.canvas.captureStream(FPS);
     this.recorder = new MediaRecorder(this.stream, {
       mimeType: this.format?.mimeType,
-      videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
+      videoBitsPerSecond: recordingBitsPerSecond(this.expectedSeconds, VIDEO_BITS_PER_SECOND),
     });
     this.recorder.ondataavailable = (event) => {
       if (event.data.size > 0) this.chunks.push(event.data);

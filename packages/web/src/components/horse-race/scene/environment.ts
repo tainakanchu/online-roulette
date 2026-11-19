@@ -41,8 +41,11 @@ import { createGroundTexture, createSignTexture, createTurfTexture } from "./tex
 /** ゴール線の x 座標（スタートは距離に応じて手前に伸びる） */
 export const FINISH_X = 260;
 export const TRACK_HALF_WIDTH = 13.5;
-/** 1m あたりのワールド単位 */
-export const WORLD_PER_METER = 0.16;
+/**
+ * 1m あたりのワールド単位。馬のモデルは等身大（1 馬身 ≒ 2.4）なので、コースも実寸にする。
+ * こうすると、実際の走破タイムで再生したときに馬が実際と同じ速さ（約 16m/s）で走って見える
+ */
+export const WORLD_PER_METER = 1;
 /** 最長距離（3600m）でもスタート地点まで芝とラチが続くようにする */
 export const COURSE_START = FINISH_X - 3600 * WORLD_PER_METER - 70;
 export const COURSE_END = FINISH_X + 140;
@@ -157,15 +160,18 @@ export const createEnvironment = (sunDirection: THREE.Vector3, options: Environm
     })
   );
   const sky = add(new THREE.SphereGeometry(1400, 32, 16), skyMat);
-  sky.position.set(FINISH_X / 2, 0, 0);
+  // コースが長いので、空はカメラの近く（芝の葉と同じ中心）について回らせる（update で動かす）
+  sky.position.set(FINISH_X, 0, 0);
 
   // ----- 地面と芝コース -----
-  const groundTex = track(createGroundTexture([75, 40]));
-  const ground = add(new THREE.PlaneGeometry(3000, 1600), track(createFarGroundMaterial(groundTex)), {
+  // 最長距離のスタート地点の先まで、遠くの地面が続くようにする（1 リピート 40 単位）
+  const groundLength = COURSE_END - COURSE_START + 3000;
+  const groundTex = track(createGroundTexture([groundLength / 40, 40]));
+  const ground = add(new THREE.PlaneGeometry(groundLength, 1600), track(createFarGroundMaterial(groundTex)), {
     receive: true,
   });
   ground.rotation.x = -Math.PI / 2;
-  ground.position.set(FINISH_X / 2 - 150, -0.02, 0);
+  ground.position.set((COURSE_START + COURSE_END) / 2, -0.02, 0);
 
   const courseLength = COURSE_END - COURSE_START;
   const turfTex = track(
@@ -390,7 +396,8 @@ export const createEnvironment = (sunDirection: THREE.Vector3, options: Environm
     },
   ];
   // 内馬場・スタンド側・コースの両端に散らす木と、パドックの裏の木立（パドック中継の映像の背景になる）
-  const scatteredTreeCount = 560;
+  // 木を散らす範囲（コースの長さ）に比例させて、どこでも同じくらいの密度にする
+  const scatteredTreeCount = Math.round((560 * (COURSE_END - COURSE_START + 290)) / 1076);
   const paddockGroveCount = 110;
   const treeCount = scatteredTreeCount + paddockGroveCount;
   const paddockBack = PADDOCK_AREA.z + PADDOCK_AREA.halfZ;
@@ -585,6 +592,7 @@ export const createEnvironment = (sunDirection: THREE.Vector3, options: Environm
     crowdUniforms.uAmp.value = 0.04 + excitement * 0.32;
     courseUniforms.uTime.value = time;
     grass.setCenter(grassCenterX);
+    sky.position.x = grassCenterX;
   };
 
   return {

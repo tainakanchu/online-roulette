@@ -420,6 +420,24 @@ export const runningPositionAt = (race: RaceSimulation, horse: number, t: number
   return (1 - BASE_PACE_SHARE) * lottery + BASE_PACE_SHARE * pace;
 };
 
+/**
+ * 描画上の馬群の詰め具合。抽選のばらつきをそのまま実寸のコース（1m = 1 単位）に描くと、
+ * 1・2 着の差が十数馬身、馬群が数百 m に広がってしまうので、勝ち馬を基準に差を詰める
+ * （勝ち馬の位置と、各時刻の並び順は変わらない）
+ */
+export const FIELD_SPREAD = 0.15;
+
+/**
+ * 画面に描く位置。runningPositionAt の差を、勝ち馬を基準に FIELD_SPREAD 倍に詰める。
+ * 勝ち馬は winnerTime でちょうどゴールし、どの時刻でも並び順は runningPositionAt と同じ
+ */
+export const displayPositionAt = (race: RaceSimulation, horse: number, t: number): number => {
+  const own = runningPositionAt(race, horse, t);
+  if (race.winner < 0 || horse === race.winner) return own;
+  const winner = runningPositionAt(race, race.winner, t);
+  return winner + (own - winner) * FIELD_SPREAD;
+};
+
 /** モンテカルロで各馬の勝率を見積もる（オッズ・印に使う） */
 export const estimateWinProbabilities = (
   strengths: number[],

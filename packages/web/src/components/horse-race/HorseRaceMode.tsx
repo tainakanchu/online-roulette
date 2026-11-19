@@ -8,6 +8,7 @@ import { CoursePicker } from "./CoursePicker";
 import { DistancePicker } from "./DistancePicker";
 import { RaceCard } from "./RaceCard";
 import { Commentator, type CommentaryLine } from "./commentary";
+import { winningTimeSeconds } from "../../utils/raceResult";
 import { isRaceRecordingSupported, RaceRecorder, type RaceVideo } from "./raceRecorder";
 import { BLACKOUT_MS } from "./recorderNews";
 import { NewsOverlay } from "./NewsOverlay";
@@ -23,6 +24,8 @@ const GO_HOLD_MS = 650;
 const RECORD_TAIL_MS = 2500;
 /** 確定からレース後のニュースに切り替えるまで（確定の後に電光掲示板を映す時間） */
 const NEWS_DELAY_MS = 3600;
+/** 録画の長さの見込みで、レースに足す時間（ゴール後の確定とニュース。秒） */
+const RECORDING_EXTRA_SECONDS = 60;
 /** 騎乗合図（止まーれー）から、騎手が乗ってゲートへ移るまで */
 const MOUNT_CALL_MS = 1800;
 /** 競馬場とスタジオの切り替えで黒を挟む時間（CSS の news-blackout と合わせる） */
@@ -392,7 +395,10 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
 
     function runRace() {
       if (!scene) return;
-      const recorder = canRecord ? new RaceRecorder() : null;
+      // 録画はレース（実際の走破タイム）に、ゴール後の確定とニュースの分を足した長さを見込む
+      const recorder = canRecord
+        ? new RaceRecorder(winningTimeSeconds(distance, surface, going) + RECORDING_EXTRA_SECONDS)
+        : null;
       if (recorder) {
         recorderRef.current = recorder;
         setIsRecording(true);
@@ -462,9 +468,11 @@ export const HorseRaceMode: FC<HorseRaceModeProps> = ({ options, onFinish, onNot
     discardRecording,
     distance,
     entries,
+    going,
     later,
     nextRaceNumber,
     onFinish,
+    surface,
   ]);
 
   const reset = useCallback(() => {

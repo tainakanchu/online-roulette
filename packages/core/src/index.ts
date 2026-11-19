@@ -30,6 +30,8 @@ export {
   simulateHorseRace,
   positionAt,
   runningPositionAt,
+  displayPositionAt,
+  FIELD_SPREAD,
   winnerTime,
   estimateWinProbabilities,
   oddsFromProbability,

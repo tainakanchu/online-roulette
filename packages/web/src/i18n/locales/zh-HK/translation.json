@@ -214,7 +214,8 @@
       "surge": "{{name}}從外疊猛追上來！",
       "close": "{{first}}同{{second}}，並排衝刺！",
       "finish": "{{name}}衝過終點！",
-      "photo": "幾乎同時衝線！影相判定…勝出的是{{name}}！"
+      "photo": "幾乎同時衝線！影相判定…勝出的是{{name}}！",
+      "furlong": "尚餘{{meters}}米，{{first}}領先，{{second}}第二"
     },
     "news": {
       "skip": "略過新聞",
