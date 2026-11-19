@@ -3,6 +3,9 @@
   "compilerOptions": {
     "module": "CommonJS",
     "moduleResolution": "node",
+    "paths": {
+      "@tainakanchu/roulette-core": ["../core/src/index.ts"]
+    },
     "allowImportingTsExtensions": false
   },
   "include": ["src/**/*.test.ts", "src/**/*.test.tsx"]

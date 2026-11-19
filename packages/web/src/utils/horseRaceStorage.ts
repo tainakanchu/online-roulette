@@ -15,6 +15,9 @@ const ACTIVITY_KEY = "roulette-horse-race-github-activity";
 
 const MAX_HISTORY = 100;
 
+export const getOwnValue = <T>(record: Record<string, T>, key: string): T | undefined =>
+  Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+
 const readJson = <T>(key: string, fallback: T): T => {
   const raw = readLocalStorage(key);
   if (!raw) return fallback;
@@ -79,10 +82,18 @@ export const saveRaceName = (name: string) => {
 export const RACE_GRADES = ["G1", "G2", "G3", "OP", ""] as const;
 export type RaceGrade = (typeof RACE_GRADES)[number];
 
-export const loadRaceGrade = (): RaceGrade => {
-  const value = readLocalStorage(RACE_GRADE_KEY);
-  return RACE_GRADES.find((grade) => grade === value) ?? "G1";
-};
+export const parseRaceGrade = (value: unknown): RaceGrade | null =>
+  RACE_GRADES.find((grade) => grade === value) ?? null;
+
+export const loadRaceGrade = (): RaceGrade => parseRaceGrade(readLocalStorage(RACE_GRADE_KEY)) ?? "G1";
+
+// URL クエリでは格付けなし（空文字）を "none" で表す
+const NO_GRADE_QUERY = "none";
+
+export const raceGradeToQuery = (grade: RaceGrade): string => grade || NO_GRADE_QUERY;
+
+export const raceGradeFromQuery = (value: string | null): RaceGrade | null =>
+  value === NO_GRADE_QUERY ? "" : value ? parseRaceGrade(value) : null;
 
 export const saveRaceGrade = (grade: RaceGrade) => {
   writeLocalStorage(RACE_GRADE_KEY, grade);
@@ -109,10 +120,28 @@ export interface CachedActivity {
   fetchedAt: number;
 }
 
+const isCachedActivity = (value: unknown): value is CachedActivity => {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.fetchedAt !== "number" ||
+    !Number.isFinite(record.fetchedAt) || record.fetchedAt < 0 ||
+    !record.activity || typeof record.activity !== "object"
+  ) return false;
+  const activity = record.activity as Record<string, unknown>;
+  return [activity.commits, activity.pullRequests, activity.reviews, activity.issues].every(
+    (counter) => typeof counter === "number" && Number.isFinite(counter) && counter >= 0
+  );
+};
+
 export const loadActivityCache = (): Record<string, CachedActivity> => {
   const value = readJson<unknown>(ACTIVITY_KEY, {});
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, CachedActivity>;
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, CachedActivity] => isCachedActivity(entry[1])
+    )
+  );
 };
 
 export const saveActivityCache = (cache: Record<string, CachedActivity>) => {

@@ -1,8 +1,15 @@
 import * as THREE from "three";
-import { createCoatMaterial, createCoatUniforms, type CoatMarking } from "./horseCoat";
+import { createCoatMaterial, createCoatUniforms, setCoatAccent, type CoatMarking } from "./horseCoat";
 import { createTailDepthMaterial, createTailGeometry, createTailMaterial, createTailUniforms } from "./horseTail";
 import { createNameLabelTexture, createSilkTexture } from "./textures";
 import { createZekkenTexture } from "./paddockTextures";
+import {
+  createAvatarBadgeTexture,
+  createAvatarDecal,
+  createAvatarDecalMaterial,
+  extractAvatarColors,
+  loadGitHubAvatar,
+} from "./githubAvatar";
 
 // プリミティブを組み合わせた手続き生成の競走馬 + 騎手。+X 方向を向く。
 
@@ -25,6 +32,8 @@ export interface HorseSpec {
   name: string;
   color: string;
   seed: number;
+  /** GitHub 連携したユーザー名。あればゼッケンと勝負服にアバターを付け、毛色にアバターの色の斑を足す */
+  login?: string;
 }
 
 interface Leg {
@@ -90,6 +99,7 @@ export class HorseModel {
   private readonly tailUniforms = createTailUniforms();
   /** 汗のツヤ 0..1。走るほど増え、止まると引いていく */
   private sweat = 0;
+  private disposed = false;
 
   constructor(readonly spec: HorseSpec) {
     const coat = COATS[spec.seed % COATS.length];
@@ -295,6 +305,35 @@ export class HorseModel {
     // ターフビジョンの中継映像には映さない（シーンのカメラだけがレイヤー 1 を映す）
     this.label.layers.set(1);
     this.root.add(this.label);
+
+    if (spec.login) void this.applyAvatar(spec.login, clothMat, torsoJ);
+  }
+
+  /** アバターが読めたら、ゼッケンを描き直し、勝負服の背中に貼り、毛色に斑を足す。読めなければ今の見た目のまま */
+  private async applyAvatar(login: string, clothMat: THREE.MeshStandardMaterial, jockeyTorso: THREE.Mesh) {
+    let image: HTMLImageElement;
+    try {
+      image = await loadGitHubAvatar(login);
+    } catch {
+      return;
+    }
+    if (this.disposed) return;
+    clothMat.map = this.track(createZekkenTexture(this.spec.number, this.spec.name, this.spec.color, image));
+    clothMat.needsUpdate = true;
+    // 背中（前傾した胴の -X 側）。上は頭の向き
+    const material = this.track(createAvatarDecalMaterial());
+    material.map = this.track(createAvatarBadgeTexture(image));
+    const decal = createAvatarDecal(
+      jockeyTorso,
+      new THREE.Vector3(-0.16, 0, 0),
+      new THREE.Vector3(-1, 0, 0),
+      new THREE.Vector3(0, 1, 0),
+      0.26,
+      material
+    );
+    this.track(decal.geometry);
+    const colors = extractAvatarColors(image);
+    if (colors) setCoatAccent(this.coatUniforms, colors);
   }
 
   private track<T extends { dispose: () => void }>(item: T): T {
@@ -440,6 +479,7 @@ export class HorseModel {
   }
 
   dispose() {
+    this.disposed = true;
     for (const item of this.disposables) item.dispose();
   }
 }

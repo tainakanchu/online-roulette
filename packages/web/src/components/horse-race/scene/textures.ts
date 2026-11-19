@@ -160,10 +160,3 @@ export const createSoftDotTexture = () => {
   ctx.fillRect(0, 0, 64, 64);
   return toTexture(canvas);
 };
-
-/** ターフビジョン（大型ビジョン）用キャンバス */
-export const createVisionCanvas = () => {
-  const { canvas, ctx } = makeCanvas(1024, 400);
-  const texture = toTexture(canvas);
-  return { canvas, ctx, texture };
-};

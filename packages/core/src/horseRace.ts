@@ -35,7 +35,9 @@ const LEGACY_DISTANCES: Record<string, number> = { sprint: 1200, mile: 1600, lon
 
 /** 保存値などから距離（m）を読み取る。読めなければ null */
 export const parseDistance = (value: unknown): number | null => {
-  if (typeof value === "string" && value in LEGACY_DISTANCES) return LEGACY_DISTANCES[value];
+  if (typeof value === "string" && Object.prototype.hasOwnProperty.call(LEGACY_DISTANCES, value)) {
+    return LEGACY_DISTANCES[value];
+  }
   const num = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
   if (!Number.isFinite(num) || num <= 0) return null;
   return clampDistance(num);
@@ -203,9 +205,9 @@ export const computeRating = (
 
 /**
  * 能力値 → 当たりやすさ。
- * 「少し効かせる」ために ±8% 程度の差にとどめる。
+ * 「少し効かせる」ために ±3% 程度の差にとどめる。
  */
-export const STRENGTH_SPREAD = 0.08;
+export const STRENGTH_SPREAD = 0.03;
 export const strengthFromRating = (rating: number): number =>
   1 + (STRENGTH_SPREAD * (rating - 70)) / 30;
 

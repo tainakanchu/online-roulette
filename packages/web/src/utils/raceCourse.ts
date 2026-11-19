@@ -12,19 +12,20 @@ export type TrackSurface = (typeof TRACK_SURFACES)[number];
 export const TRACK_GOINGS = ["firm", "good", "yielding", "soft"] as const;
 export type TrackGoing = (typeof TRACK_GOINGS)[number];
 
-export const loadSurface = (): TrackSurface => {
-  const value = readLocalStorage(SURFACE_KEY);
-  return TRACK_SURFACES.find((surface) => surface === value) ?? "turf";
-};
+export const parseSurface = (value: unknown): TrackSurface | null =>
+  TRACK_SURFACES.find((surface) => surface === value) ?? null;
+
+export const parseGoing = (value: unknown): TrackGoing | null =>
+  TRACK_GOINGS.find((going) => going === value) ?? null;
+
+export const loadSurface = (): TrackSurface =>
+  parseSurface(readLocalStorage(SURFACE_KEY)) ?? "turf";
 
 export const saveSurface = (surface: TrackSurface) => {
   writeLocalStorage(SURFACE_KEY, surface);
 };
 
-export const loadGoing = (): TrackGoing => {
-  const value = readLocalStorage(GOING_KEY);
-  return TRACK_GOINGS.find((going) => going === value) ?? "firm";
-};
+export const loadGoing = (): TrackGoing => parseGoing(readLocalStorage(GOING_KEY)) ?? "firm";
 
 export const saveGoing = (going: TrackGoing) => {
   writeLocalStorage(GOING_KEY, going);

@@ -36,7 +36,7 @@ export const RouletteSpinner = ({
     const logic = createDefaultRouletteLogic();
     const { totalRotation, duration: baseDuration } = logic.calculateRotation();
     const duration = quickMode ? baseDuration * 0.4 : baseDuration;
-    const finalRotation = quickMode ? totalRotation * 0.4 : totalRotation;
+    const finalRotation = quickMode ? totalRotation - 360 * 6 : totalRotation;
     const selectedIndex = logic.calculateSelectedIndex(options, finalRotation);
 
     const startTime = Date.now();

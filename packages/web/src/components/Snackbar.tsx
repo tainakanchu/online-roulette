@@ -19,15 +19,19 @@ export const Snackbar: React.FC<SnackbarProps> = ({
   useEffect(() => {
     if (isVisible) {
       setIsExiting(false);
+      let closeTimer: ReturnType<typeof setTimeout>;
       const timer = setTimeout(() => {
         setIsExiting(true);
-        setTimeout(onClose, 300); // フェードアウトアニメーションの時間
+        closeTimer = setTimeout(onClose, 300); // フェードアウトアニメーションの時間
       }, duration);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(closeTimer);
+      };
     }
   }, [isVisible, duration, onClose]);
 
-  if (!isVisible && !isExiting) return null;
+  if (!isVisible) return null;
 
   return (
     <div className={`snackbar ${isExiting ? "exiting" : ""}`}>

@@ -11,12 +11,26 @@ export interface CoatUniforms {
   uSweat: { value: number };
   /** 馬全体（root）のワールド行列の逆行列 */
   uRootInverse: { value: THREE.Matrix4 };
+  /** GitHub アイコンから選んだ斑の 2 色（リニア）と、その濃さ 0..1（0 なら元の毛色のまま） */
+  uAccentA: { value: THREE.Color };
+  uAccentB: { value: THREE.Color };
+  uAccent: { value: number };
 }
 
 export const createCoatUniforms = (): CoatUniforms => ({
   uSweat: { value: 0 },
   uRootInverse: { value: new THREE.Matrix4() },
+  uAccentA: { value: new THREE.Color() },
+  uAccentB: { value: new THREE.Color() },
+  uAccent: { value: 0 },
 });
+
+/** 毛色にアイコンの色の斑を足す。ユニフォームを書き換えるだけなので、シェーダーは作り直さない */
+export const setCoatAccent = (uniforms: CoatUniforms, [a, b]: [THREE.Color, THREE.Color]) => {
+  uniforms.uAccentA.value.copy(a);
+  uniforms.uAccentB.value.copy(b);
+  uniforms.uAccent.value = 1;
+};
 
 export type CoatMarking = "none" | "star" | "blaze";
 
@@ -48,6 +62,13 @@ const COAT_VERTEX = /* glsl */ `
 
 const COAT_COLOR = /* glsl */ `
   {
+    // アイコンの色: 地の毛色を 2 色目へ大きく寄せ、なめらかなノイズの山に 1 色目の斑を乗せる。
+    // 毛並み・腹側の陰・汗はこの後に掛けるので、斑も同じように陰る
+    if (uAccent > 0.0) {
+      diffuseColor.rgb = mix(diffuseColor.rgb, uAccentB, 0.75 * uAccent);
+      float spots = noise3(vCoatPos * 0.8 + 0.53).r;
+      diffuseColor.rgb = mix(diffuseColor.rgb, uAccentA, smoothstep(0.55, 0.65, spots) * 0.85 * uAccent);
+    }
     // 毛並み: 体の長さ方向（x）に引き伸ばして引いた細かいノイズで、色をわずかに揺らす
     float hair = noise3(vec3(vCoatPos.x * 0.6, vCoatPos.y * 7.0, vCoatPos.z * 7.0)).g;
     diffuseColor.rgb *= 0.92 + 0.16 * hair;
@@ -100,7 +121,7 @@ export const createCoatMaterial = (uniforms: CoatUniforms, options: CoatOptions)
       "uniform mat4 uRootInverse;\nvarying vec3 vCoatPos;\nvarying vec3 vCoatPart;\nvarying float vCoatUp;\n" +
       shader.vertexShader.replace("#include <begin_vertex>", COAT_VERTEX);
     shader.fragmentShader =
-      "uniform float uSweat;\nvarying vec3 vCoatPos;\nvarying vec3 vCoatPart;\nvarying float vCoatUp;\n" +
+      "uniform float uSweat;\nuniform vec3 uAccentA;\nuniform vec3 uAccentB;\nuniform float uAccent;\nvarying vec3 vCoatPos;\nvarying vec3 vCoatPart;\nvarying float vCoatUp;\n" +
       NOISE3D_GLSL +
       shader.fragmentShader
         .replace("#include <color_fragment>", "#include <color_fragment>\n" + COAT_COLOR)

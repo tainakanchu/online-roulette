@@ -1,4 +1,4 @@
-import { useCallback, useRef, useMemo } from "react";
+import { useCallback, useRef } from "react";
 
 // 1シャカ = 往復1回分（ジャラ・ジャラ）のパラメータ
 const BURST_SEC = 0.07; // ノイズバースト1発分（70ms）
@@ -98,14 +98,6 @@ export const useShakeSound = () => {
 
   // シャカバッファはサンプルレート依存のため、初回生成してキャッシュ
   const bufferRef = useRef<AudioBuffer | null>(null);
-  const sampleRate = useMemo(() => new AudioContext().sampleRate, []);
-
-  const getBuffer = useCallback(() => {
-    if (!bufferRef.current) {
-      bufferRef.current = createShakaBuffer(sampleRate);
-    }
-    return bufferRef.current;
-  }, [sampleRate]);
 
   const start = useCallback(() => {
     try {
@@ -127,7 +119,10 @@ export const useShakeSound = () => {
       }
 
       const source = ctx.createBufferSource();
-      source.buffer = getBuffer();
+      if (!bufferRef.current) {
+        bufferRef.current = createShakaBuffer(ctx.sampleRate);
+      }
+      source.buffer = bufferRef.current;
       source.loop = true;
 
       // ハイパスフィルタ：低音のこもりを除去
@@ -178,7 +173,7 @@ export const useShakeSound = () => {
     } catch {
       // Web Audio API が利用不可の場合は無視
     }
-  }, [getBuffer]);
+  }, []);
 
   const stop = useCallback(() => {
     if (sourceRef.current) {
