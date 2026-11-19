@@ -214,7 +214,8 @@
       "surge": "{{name}}が外から猛然と追い込んでくる！",
       "close": "{{first}}と{{second}}、並んだ並んだ！",
       "finish": "{{name}}、いまゴールイン！",
-      "photo": "ほとんど並んでゴール！ 写真判定… 勝ったのは{{name}}！"
+      "photo": "ほとんど並んでゴール！ 写真判定… 勝ったのは{{name}}！",
+      "furlong": "残り{{meters}}、先頭は{{first}}、2番手に{{second}}"
     },
     "news": {
       "skip": "ニュースをとばす",

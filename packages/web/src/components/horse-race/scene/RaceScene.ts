@@ -3,7 +3,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { runningPositionAt, winnerTime, type RaceSimulation } from "@tainakanchu/roulette-core";
+import { displayPositionAt, FIELD_SPREAD, winnerTime, type RaceSimulation } from "@tainakanchu/roulette-core";
 import type { TrackGoing, TrackSurface } from "../../../utils/raceCourse";
 import {
   createEnvironment,
@@ -33,7 +33,14 @@ import { createSignTexture, createSoftDotTexture } from "./textures";
 import type { VisionInfo } from "./turfVision";
 import type { NewsSegment } from "../../../utils/raceNews";
 import { CameraOperator, type OperatorFrame } from "../../../utils/cameraOperator";
-import { pickCameraPlan, shotForFraction, type CameraPlan } from "../../../utils/raceCamera";
+import { pickCameraPlan, shotForDistance, shotForFraction, type CameraPlan } from "../../../utils/raceCamera";
+import {
+  isSlowMotion,
+  MAX_POST_FINISH_SECONDS,
+  planReplay,
+  targetTimeScale,
+  type ReplayPlan,
+} from "../../../utils/raceTiming";
 import type { NewsStudio } from "./newsStudio";
 import type { NewsWallInfo } from "./newsScreens";
 import { loadPaddockModels, Paddock, PADDOCK_CENTER, type PaddockBoardLabels, type PaddockEntry } from "./paddock";
@@ -162,13 +169,10 @@ const POST_FINISH_SECONDS = 4.2;
 const CONFIRM_AFTER_LAST_SECONDS = 1.2;
 /** 上位 5 頭がゴールしてから着順掲示板に切り替えるまでの間 */
 const RESULT_BOARD_DELAY_SECONDS = 1.5;
-/** これだけ待っても全馬がゴールしなければ確定させる（念のため） */
-const MAX_POST_FINISH_SECONDS = 15;
 /** 写真判定にする 1・2 着の差（馬身） */
 const PHOTO_MARGIN_LENGTHS = 0.25;
 /**
- * 1 馬身のワールド単位（馬のモデルの鼻先から尾まで）。コースは 1m = 0.16 単位に縮めてあり馬の大きさと縮尺が違うので、
- * 着差はメートルではなく画面で見える馬の体の長さで数える（メートル換算だと見た目より何倍も大きな着差になる）
+ * 1 馬身のワールド単位（馬のモデルの鼻先から尾まで）。コースも馬も実寸（1m = 1 単位）なので、実際の 1 馬身（約 2.4m）と同じ
  */
 const HORSE_LENGTH_UNITS = 2.4;
 const FINISH_HOLD_SECONDS = 1.3;
@@ -182,13 +186,14 @@ const PHOTO_PIXELS_PER_LENGTH = 110;
 const PHOTO_WINNER_PIXEL = 300;
 /** ターフビジョンの画面の中心（environment.ts の配置と合わせる） */
 const BOARD_CENTER = new THREE.Vector3(FINISH_X - 50, 12, TRACK_HALF_WIDTH + 26);
-/** スローモーションにする1・2着の見た目の差（単位。約13m） */
+/** スローモーションにする 1・2 着の差（詰める前のレース内部の単位。画面では 1 馬身弱） */
 const CLOSE_FINISH_GAP = 0.3;
-const OVERRUN = 32;
-/** ニュースの VTR: ゴールの前後をスローで見せる再生速度と、スローにする範囲（実時間の秒。ゴールの前と後） */
-const REPLAY_SLOW_SCALE = 0.3;
-const REPLAY_SLOW_BEFORE = 0.9;
-const REPLAY_SLOW_AFTER = 0.7;
+/** 内ラチ沿いのカメラ: 先頭がカメラをこれだけ過ぎたら、次の定位置へ切り替える（単位） */
+const RAIL_CAMERA_REARM = 25;
+/** ゴールを過ぎてから止まるまでに走る距離の目安（m）。実際の馬は 100m 以上かけて減速する */
+const OVERRUN = 120;
+/** ニュースの VTR: ゴールの前後をスローで見せる時間（実時間の秒） */
+const REPLAY_SLOW_SECONDS = 5.3;
 
 /** ゴール後は徐々に減速して止まるように見せる */
 const compressAfterFinish = (x: number) =>
@@ -199,8 +204,6 @@ const smoothstep = (edge0: number, edge1: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-/** スローモーション時の再生速度 */
-const SLOW_MOTION_SCALE = 0.35;
 /** 道中で内ラチ側へ寄っていく度合い（1 = 全馬ラチ沿い） */
 const LANE_SQUEEZE = 0.3;
 
@@ -541,7 +544,7 @@ export class RaceScene {
   private lastPaddockFocus = "";
   private readonly paddockTmp = new THREE.Vector3();
   /** ニュースの VTR（ゴール前のリプレイ）。savedT はリプレイ前のレース内部時刻（終わったら戻す） */
-  private replay: { slowFrom: number; savedT: number; time: number } | null = null;
+  private replay: (ReplayPlan & { savedT: number; time: number }) | null = null;
   private readonly videoLook = new THREE.Vector3();
   private readonly videoPos = new THREE.Vector3();
   private readonly videoDesiredPos = new THREE.Vector3();
@@ -834,11 +837,10 @@ export class RaceScene {
   }
 
   /**
-   * @param durationSeconds 勝ち馬がゴールするまでの実時間（スローモーション分は伸びる）
+   * 勝ち馬は実際のレースと同じ時間（勝ち時計）でゴールする。スローモーション分はさらに伸びる
    */
-  startRace(race: RaceSimulation, durationSeconds: number, callbacks: RaceCallbacks) {
+  startRace(race: RaceSimulation, callbacks: RaceCallbacks) {
     this.race = race;
-    this.raceRate = Math.max(0.1, winnerTime(race)) / durationSeconds;
     this.raceT = 0;
     this.timeScale = 1;
     this.running = true;
@@ -851,6 +853,8 @@ export class RaceScene {
     // 勝ち馬はレース内部時刻 winnerTime でゴールするので、それが勝ち時計になるよう換算する
     this.winnerSeconds = winningTimeSeconds(this.distanceMeters, this.surface, this.going, Math.random() * 2 - 1);
     this.secondsPerUnit = this.winnerSeconds / Math.max(0.1, winnerTime(race));
+    // 再生速度も勝ち時計に合わせる（画面の時計と実際の経過時間が一致する）
+    this.raceRate = 1 / this.secondsPerUnit;
     this.resetFinishState();
     // 決勝写真: 勝ち馬はレース内部時刻 winnerTime でゴールするので、その少し前から撮る
     const unitsPerTime = (FINISH_X - this.startX) / Math.max(0.1, winnerTime(race));
@@ -1342,7 +1346,7 @@ export class RaceScene {
 
   /** 馬のレース内部での位置（単位） */
   private horseProgress(i: number): number {
-    return this.race ? runningPositionAt(this.race, i, this.raceT) : 0;
+    return this.race ? displayPositionAt(this.race, i, this.raceT) : 0;
   }
 
   private currentOrder(progresses: number[]) {
@@ -1392,7 +1396,7 @@ export class RaceScene {
     const courseLength = FINISH_X - this.startX;
     const step = 1 / 60;
     const worldX = (time: number, i: number) =>
-      this.rootXAt(this.startX + (runningPositionAt(race, i, time) / target) * courseLength);
+      this.rootXAt(this.startX + (displayPositionAt(race, i, time) / target) * courseLength);
     this.raceT = t;
     this.horses.forEach((_, i) => {
       const before = worldX(t - step * this.raceRate, i);
@@ -1402,6 +1406,8 @@ export class RaceScene {
     const progresses = this.horses.map((_, i) => this.horseProgress(i));
     const order = this.currentOrder(progresses);
     this.moveHorses(progresses, order, Math.min(1, (progresses[order[0]] ?? 0) / target), step, step);
+    // カメラの注視点も移した先へ合わせる（実寸のコースでは数百 m 跳ぶので、追いかけると最初の数秒が空のコースになる）
+    this.updateFocus(1e3);
   }
 
   // ----- レース後のニュース -----
@@ -1444,13 +1450,17 @@ export class RaceScene {
     const race = this.race;
     if (!race) return;
     const finish = winnerTime(race);
-    const slowSeconds = (REPLAY_SLOW_BEFORE + REPLAY_SLOW_AFTER) / REPLAY_SLOW_SCALE;
     // 最後に 0.3 秒ほど余らせて、ゴールを過ぎた所で切り替わるようにする
-    const normalSeconds = Math.max(1.5, seconds - slowSeconds - 0.3);
-    const slowFrom = finish - REPLAY_SLOW_BEFORE * this.raceRate;
-    const from = slowFrom - normalSeconds * this.raceRate;
-    this.replay = { slowFrom, savedT: this.raceT, time: 0 };
-    this.jumpHorsesTo(race, Math.max(0, from));
+    const normalSeconds = Math.max(1.5, seconds - REPLAY_SLOW_SECONDS - 0.3);
+    const plan = planReplay({
+      finishTime: finish,
+      metersPerTime: this.distanceMeters / Math.max(0.1, finish),
+      normalSeconds,
+      slowSeconds: REPLAY_SLOW_SECONDS,
+      realRate: this.raceRate,
+    });
+    this.replay = { ...plan, savedT: this.raceT, time: 0 };
+    this.jumpHorsesTo(race, plan.from);
     this.timeScale = 1;
     this.setShot("headon", true, true);
   }
@@ -1463,11 +1473,13 @@ export class RaceScene {
     // 等速の前半は正面から、後半は真横で並走、ゴールの前後はゴール線の真横からスローで
     if (slow) this.setShot("finish");
     else if (replay.time > 2.4) this.setShot("stretch");
-    const dt = realDt * (slow ? REPLAY_SLOW_SCALE : 1);
+    // VTR は距離で範囲を決め、決まった秒数に収まる速さで流す。馬の脚の動きは実際の速さに対する倍率で進める
+    const rate = slow ? replay.slowRate : replay.normalRate;
+    const dt = (realDt * rate) / this.raceRate;
     const progresses = this.horses.map((_, i) => this.horseProgress(i));
     const order = this.currentOrder(progresses);
     const leaderFraction = Math.min(1, (progresses[order[0]] ?? 0) / race.target);
-    this.raceT += dt * this.raceRate;
+    this.raceT += realDt * rate;
     this.moveHorses(progresses, order, leaderFraction, dt, realDt);
     this.showVisionAt(race, order, false);
     return dt;
@@ -1525,10 +1537,22 @@ export class RaceScene {
       const leader = progresses[order[0]] ?? 0;
       const second = progresses[order[1]] ?? 0;
       const leaderFraction = Math.min(1, leader / target);
-      const gapTop2 = leader - second;
-      this.slowMotion = !this.winnerCrossed && leaderFraction > 0.93 && gapTop2 < CLOSE_FINISH_GAP;
-      // 再生速度は急に変えず、なめらかに寄せる
-      const targetScale = this.slowMotion ? SLOW_MOTION_SCALE : 1;
+      // 描画上の差は勝ち馬基準で FIELD_SPREAD 倍に詰めてあるので、接戦の判定（スロー・実況）は詰める前の差で行う。
+      // 実寸のコースに詰めた差を描くと、旧縮尺（1m = 0.16）のときとほぼ同じ見た目の差になる
+      const gapTop2 = (leader - second) / FIELD_SPREAD;
+      const remainingMeters = this.distanceMeters * (1 - leaderFraction);
+      this.slowMotion = isSlowMotion({
+        winnerCrossed: this.winnerCrossed,
+        remainingMeters,
+        gapTop2,
+        closeGap: CLOSE_FINISH_GAP,
+      });
+      // 再生速度は急に変えず、なめらかに寄せる。着順掲示板を映している間は、まだ走っている後続を早送りする
+      const targetScale = targetTimeScale({
+        slowMotion: this.slowMotion,
+        showingBoard: this.shot === "board",
+        allFinished: this.finishOrder.length >= this.horses.length,
+      });
       this.timeScale += (targetScale - this.timeScale) * (1 - Math.exp(-realDt * 5));
       dt = realDt * this.timeScale;
       this.excitement = Math.min(1, Math.max(this.excitement * 0.98, leaderFraction * leaderFraction));
@@ -1577,6 +1601,10 @@ export class RaceScene {
         }
       } else {
         this.chooseRaceShot(leaderFraction);
+        // 内ラチ沿いのカメラは、馬群が通り過ぎたら次の定位置のカメラに切り替える（誰もいないコースを映し続けない）
+        if (this.shot === "rail" && this.leaderX() > this.railCameraX + RAIL_CAMERA_REARM) {
+          this.setShot("rail", true, true);
+        }
       }
 
       this.updateVisionState(order, race);
@@ -1836,7 +1864,7 @@ export class RaceScene {
       const p = winner.root.position;
       this.videoDesiredPos.set(p.x + 9, 3, p.z - 11);
       this.videoDesiredLook.set(p.x, 1.6, p.z);
-    } else if (this.leaderFraction > 0.8) {
+    } else if (this.distanceMeters * (1 - this.leaderFraction) < 400) {
       shot = "stretch";
       fov = 10;
       this.videoDesiredPos.set(FINISH_X + 70, 5, -4);
@@ -1873,16 +1901,21 @@ export class RaceScene {
     vision.renderVideo(this.renderer, this.scene);
   }
 
-  /** 先頭の進み具合から、このレースのカメラワークの型のカットを映す */
+  /** 先頭が走った距離から、このレースのカメラワークの型のカットを映す（長いレースでも 1 カットが長くなりすぎない） */
   private chooseRaceShot(fraction: number) {
     if (!this.cameraPlan) return;
-    this.setShot(shotForFraction(this.cameraPlan, fraction));
+    this.setShot(shotForDistance(this.cameraPlan, fraction * this.distanceMeters, this.distanceMeters));
   }
 
   /**
    * カメラの注視点。先頭に近い馬ほど重く平均するので、順位が入れ替わっても飛ばない。
    * さらに時間方向にも追従を遅らせてなめらかにする。
    */
+  /** VTR の等速の部分を、実際の何倍で流しているか（VTR 以外は 1） */
+  private replaySpeedup() {
+    return this.replay ? Math.max(1, this.replay.normalRate / this.raceRate) : 1;
+  }
+
   private updateFocus(dt: number) {
     if (this.horses.length === 0) return;
     let lead = -Infinity;
@@ -1895,7 +1928,8 @@ export class RaceScene {
       weight += w;
     }
     const target = sum / weight;
-    this.focusX += (target - this.focusX) * (1 - Math.exp(-dt * 6));
+    // VTR は実際より速く流すので、遅れの量（速さ ÷ 追従の速さ）が実際の速さのときと同じになるよう、追従も速める
+    this.focusX += (target - this.focusX) * (1 - Math.exp(-dt * 6 * this.replaySpeedup()));
   }
 
   /**
@@ -2108,7 +2142,8 @@ export class RaceScene {
     } else {
       // 臨界減衰のバネで追う（行き過ぎず、動き出しと止まりがなめらか）。
       // 狙いの動く速さも合わせて追うので、一定の速さで走る馬群には遅れずに付いていく（速さを合わせないと 2 × 速さ ÷ ω だけ遅れる）
-      const omega = style.follow;
+      // VTR は実際より速く流すので、追従もその倍率だけ速める
+      const omega = style.follow * this.replaySpeedup();
       const zeta = style.damping ?? 1;
       const step = (
         current: THREE.Vector3,
