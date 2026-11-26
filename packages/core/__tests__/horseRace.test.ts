@@ -11,6 +11,8 @@ import {
   positionAt,
   raceTarget,
   runningPositionAt,
+  displayPositionAt,
+  FIELD_SPREAD,
   recentFinishes,
   runningStyleFor,
   simulateHorseRace,
@@ -332,6 +334,38 @@ describe("horseRace", () => {
 
     it("発走時はゲート位置から動き出す", () => {
       expect(runningPositionAt(race, 0, 0)).toBe(0);
+    });
+  });
+
+  describe("displayPositionAt", () => {
+    const target = 30;
+    const race = simulateHorseRace({
+      strengths: [1, 1, 1, 1, 1, 1, 1, 1],
+      styles: ["front", "stalker", "closer", "deep", "front", "stalker", "closer", "deep"],
+      target,
+      random: seeded(23),
+    });
+    const n = race.samples.length;
+
+    it("勝ち馬は runningPositionAt と同じ位置にいて、winnerTime でちょうどゴールする", () => {
+      const first = winnerTime(race);
+      for (const t of [0, first / 3, first]) {
+        expect(displayPositionAt(race, race.winner, t)).toBe(runningPositionAt(race, race.winner, t));
+      }
+      expect(displayPositionAt(race, race.winner, first)).toBeCloseTo(target, 3);
+    });
+
+    it("どの時刻でも並び順は runningPositionAt と同じで、勝ち馬との差だけが FIELD_SPREAD 倍になる", () => {
+      for (let t = 0.5; t < winnerTime(race); t += 1.7) {
+        const running = Array.from({ length: n }, (_, i) => runningPositionAt(race, i, t));
+        const shown = Array.from({ length: n }, (_, i) => displayPositionAt(race, i, t));
+        const order = (xs: number[]) => xs.map((_, i) => i).sort((a, b) => xs[b] - xs[a] || a - b);
+        expect(order(shown)).toEqual(order(running));
+        for (let i = 0; i < n; i += 1) {
+          const w = running[race.winner];
+          expect(shown[i] - w).toBeCloseTo((running[i] - w) * FIELD_SPREAD, 9);
+        }
+      }
     });
   });
 
